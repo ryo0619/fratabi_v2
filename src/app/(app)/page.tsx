@@ -1,103 +1,74 @@
+"use client";
+
+import useSWR from "swr";
+import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+export default function Home() {
+  const { data: threads } = useSWR(`/api/threads`, fetcher);
+  const latest = threads?.[0];
+  const [jp, setJp] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!jp.trim()) return;
+    setBusy(true);
+    const res = await fetch(`/api/make`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jp, threadId: latest?.id ?? null }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      const t = await res.json();
+      setJp("");
+      location.href = `/t/${latest?.id ?? t.thread_id ?? ""}`;
+    } else {
+      const j = await res.json().catch(() => ({}));
+      if (j?.error === "LIMIT_REACHED") {
+        alert("上限に達しました。プランをアップグレードしてください");
+      } else {
+        alert("通信エラー。再思考してください");
+      }
+    }
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      <div>
+        <textarea
+          maxLength={300}
+          value={jp}
+          onChange={(e) => setJp(e.target.value)}
+          className="w-full h-28 border rounded p-3"
+          placeholder="日本語を入力してください"
+        />
+        <div className="flex justify-between mt-2">
+          <span className="text-xs text-gray-500">{jp.length}/300</span>
+          <button
+            disabled={busy}
+            onClick={submit}
+            className="px-3 py-2 rounded bg-black text-white"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {busy ? "送信中..." : "翻訳を作成"}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+      {latest ? (
+        <div className="text-sm">
+          最新スレッド:
+          <Link href={`/t/${latest.id}`} className="underline">
+            {latest.title}
+          </Link>
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">
+          スレッドがありません。送信すると自動で作成されます
+        </div>
+      )}
     </div>
   );
 }
