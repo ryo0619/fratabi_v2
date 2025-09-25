@@ -24,6 +24,11 @@ function makeClient(
       remove: cookieImpl.remove ?? (() => {}), // RSCではno-op
     },
     db: { schema: 'fratabi' },
+    auth: {
+      persistSession: false,        // サーバではセッションを保存しない（都度Cookie入力のみ）
+      autoRefreshToken: false,      // 自動リフレッシュをサーバでは無効化
+      detectSessionInUrl: false,    // リダイレクトURLでの検出はcallbackルートだけでやる
+    },
   });
   return client as Supa;
 }
@@ -64,9 +69,14 @@ export async function getUser() {
 
 /** Service Role（RLSバイパス：サーバ限定） */
 export function createSupabaseService(): Supa {
-  const { SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL } = process.env;
-  if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required on server.');
-  const client = createClient<any, 'fratabi'>(NEXT_PUBLIC_SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY, {
+  const { NEXT_PUBLIC_SUPABASE_URL } = process.env;
+  const SERVICE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    '';
+  if (!SERVICE_KEY) throw new Error('SUPABASE service role key is required on server.');
+  const client = createClient<any, 'fratabi'>(NEXT_PUBLIC_SUPABASE_URL!, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     db: { schema: 'fratabi' },
   });

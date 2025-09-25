@@ -3,34 +3,31 @@ import { createSupabaseRoute } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const next = searchParams.get('next') || '/';
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const code = url.searchParams.get('code')
+  const origin = url.origin
 
   if (!code) {
-    return NextResponse.redirect(new URL('/auth/login?error=missing_code', request.url));
+    return NextResponse.redirect(`${origin}/auth/login?error=missing_code`)
   }
 
-  // Route Handler なので cookie 書き込み可のクライアントを使う
-  const supabase = await createSupabaseRoute();
+  const supabase = await createSupabaseRoute()
 
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    return NextResponse.redirect(new URL('/auth/login?error=exchange_failed', request.url));
+  // 1) セッション確立（Cookieに保存される）
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  if (error || !data?.session?.user) {
+    return NextResponse.redirect(`${origin}/auth/login?error=exchange_failed`)
+  }
+  const user = data.session.user
+
+  // 2) users 行の存在保証（RLS: id = auth.uid() を許可している前提）
+  const up = await supabase.from('users').upsert({ id: user.id }, { onConflict: 'id' })
+  if (up.error) {
+    // 失敗してもログだけ残して進める（必要なら ?warn= を付けて戻す）
+    console.error('[callback] users upsert error:', up.error)
   }
 
-  // users を upsert（plan 既定: free）
-  const u = data.user;
-  await supabase.from('users').upsert(
-    {
-      id: u.id,
-      email: u.email,
-      display_name: u.user_metadata?.name ?? '',
-      plan: 'free',
-    },
-    { onConflict: 'id' }
-  );
-
-  return NextResponse.redirect(new URL(next, request.url));
+  // 3) ホームへ
+  return NextResponse.redirect(`${origin}/`)
 }

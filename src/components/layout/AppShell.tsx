@@ -34,14 +34,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "My phrases" }),
     });
-    if (res.ok) {
-      await mutate();
-      alert("通信エラー。再試行してください");
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({} as any));
+      alert(j?.message || j?.error || "通信エラー。再試行してください");
       return;
     }
     const t: Thread = await res.json();
-    mutate();
-    location.href = "/t/${t.id}";
+    await mutate();
+    location.href = `/t/${t.id}`;
   }
 
   return (

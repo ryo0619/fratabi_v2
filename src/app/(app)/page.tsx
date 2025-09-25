@@ -31,7 +31,7 @@ export default function Home() {
       if (j?.error === "LIMIT_REACHED") {
         alert("上限に達しました。プランをアップグレードしてください");
       } else {
-        alert("通信エラー。再思考してください");
+        alert("通信エラー。app/(app)/page.tsxでエラーです。再思考してください");
       }
     }
   }

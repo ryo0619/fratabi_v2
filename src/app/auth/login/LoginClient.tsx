@@ -1,10 +1,10 @@
 "use client";
-
-import { supabaseBrowser } from "@/lib/supabase/browser";
+//import { supabaseBrowser } from "@/lib/supabase/browser";
+import { createSupabaseBrowser } from "@/lib/supabase/browser";
 
 export default function LoginClient() {
   async function signIn() {
-    const supabase = supabaseBrowser;
+    const supabase = createSupabaseBrowser();
     const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
     await supabase.auth.signInWithOAuth({
       provider: "google",
