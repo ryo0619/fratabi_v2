@@ -112,7 +112,7 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
         <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100%-56px)]">
           <button
             type="button"
-            onClick={(e) => {
+            onClick={() => {
               console.log("[Drawer] createThread clicked");
               onCreateThread();
             }}
@@ -167,9 +167,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
       ? (candidates[idx] ?? candidates[candidates.length - 1]).id
       : null;
 
-    await mutate((curr: any) => {
+    await mutate((curr?: Thread[]) => {
       const arr = Array.isArray(curr) ? curr : [];
-      return arr.filter((x: any) => x.id !== targetId);
+      return arr.filter((x) => x.id !== targetId);
     }, false);
 
     if (selectedThreadId === targetId) {
@@ -186,8 +186,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
       setDeleteOpen(false);
       setDeleteTarget(null);
       setTimeout(() => restoreFocusEl.current?.focus(), 0);
-    } catch (err: any) {
-      alert(err?.message ?? "削除に失敗しました");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '削除に失敗しました';
+      alert(msg);
       await mutate();
     } finally {
       setDeleting(false);
@@ -258,9 +259,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
                         return alert(j?.message || j?.error || "名前の変更に失敗しました");
                       }
                       // 楽観的更新 → 再検証
-                      await mutate((curr: any) => {
+                      await mutate((curr?: Thread[]) => {
                         const list = Array.isArray(curr) ? curr : [];
-                        return list.map((x: any) => (x.id === t.id ? { ...x, title: next } : x));
+                        return list.map((x) => (x.id === t.id ? { ...x, title: next } : x));
                       }, false);
                       mutate();
                     } catch (err) {

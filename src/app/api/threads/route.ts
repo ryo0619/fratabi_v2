@@ -38,7 +38,7 @@ export async function GET() {
     // roleを付与して返却
     const roles = Object.fromEntries((memberRows ?? []).map(r => [r.thread_id, r.role]));
     return NextResponse.json((threads ?? []).map(t => ({ ...t, role: roles[t.id] ?? 'viewer' })));
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[threads][GET] fatal:', e);
     return NextResponse.json({ error: 'FATAL', message: e?.message ?? String(e) }, { status: 500 });
   }
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
   //return NextResponse.json(t);
   return NextResponse.json({ id: t.id, title: t.title });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[threads][POST] failed:', e);
     return NextResponse.json({ error: 'NETWORK', message: String(e?.message || e) }, { status: 500 });
   }
