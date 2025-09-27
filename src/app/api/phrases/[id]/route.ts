@@ -3,7 +3,8 @@ import { createSupabaseServer, createSupabaseService } from '@/lib/supabase/serv
 
 export const runtime = 'nodejs';
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createSupabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
@@ -12,7 +13,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   const { data: row, error: gErr } = await supabase
     .from('phrases')
     .select('id, thread_id, audio_url')
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
   if (gErr || !row) return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
 
