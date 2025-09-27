@@ -8,5 +8,6 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const supabase = await createSupabaseRSC();
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/auth/login");
+  // 注意: ここはルート配下のレイアウトなので <html>/<body> は描画しない
   return <AppShell>{children}</AppShell>;
 }

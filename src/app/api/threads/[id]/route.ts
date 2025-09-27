@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseRoute } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createSupabaseServer();
+  const supabase = await createSupabaseRoute();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const supabase = await createSupabaseServer();
+  const supabase = await createSupabaseRoute();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 

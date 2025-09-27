@@ -28,7 +28,7 @@ export async function GET() {
       .from('threads')
       .select('id, title, owner_user_id, archived, created_at')
       .in('id', ids)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (tErr) {
       console.error('[threads][GET] list query error:', tErr);
@@ -45,10 +45,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  try{
-  const supabase = await createSupabaseRoute();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  console.log('[API] POST /api/threads');
+  try {
+    const supabase = await createSupabaseRoute();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
   const { title } = await req.json().catch(() => ({}));
   const safeTitle = (title ?? 'My phrases').toString().slice(0, 80);
