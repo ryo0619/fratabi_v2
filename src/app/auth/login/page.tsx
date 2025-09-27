@@ -16,8 +16,9 @@ export default function LoginPage() {
       });
       if (error) throw error;
       // data.url に遷移していく（SDKが自動でリダイレクト開始）
-    } catch (e: any) {
-      alert(`ログインに失敗しました: ${e?.message || e}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`ログインに失敗しました: ${msg}`);
       setBusy(false);
     }
   };

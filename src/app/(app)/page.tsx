@@ -3,10 +3,11 @@
 import useSWR from "swr";
 import { useEffect, useMemo, useState } from "react";
 import TranslationCard from "@/components/cards/TranslationCard";
+import type { PhraseRow } from "@/lib/history";
 import { useThreadSelection } from "@/components/threads/ThreadContext";
 
 const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
-type Thread = { id: string; title: string };
+// type Thread = { id: string; title: string };
 
 export default function Home() {
   const { data: threads } = useSWR(`/api/threads`, fetcher);
@@ -70,7 +71,7 @@ export default function Home() {
 
         {/* 選択スレッドのカード一覧 */}
         <div className="mt-6 space-y-3">
-          {phrases.map((p: any) => (
+          {phrases.map((p: PhraseRow) => (
             <TranslationCard key={p.id} phrase={p} />
           ))}
           {selectedThreadId && phrases.length === 0 && (
