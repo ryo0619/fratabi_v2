@@ -11,7 +11,9 @@ export async function POST(req: Request) {
   const { cardId } = await req.json().catch(() => ({}));
   if (!cardId) return NextResponse.json({ error: 'NETWORK' }, { status: 400 });
 
-  const { error } = await supabase.from('favorites').upsert({
+  // 型定義が未導入のため、ビルドエラー回避として一時的に any 化
+  const db = supabase as any;
+  const { error } = await db.from('favorites').upsert({
     user_id: auth.user.id,
     card_id: cardId,
   });
