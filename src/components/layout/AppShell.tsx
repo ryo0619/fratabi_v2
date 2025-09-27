@@ -23,20 +23,20 @@ function ShellInner({ children }: Props) {
       });
       console.log('[AppShell] POST /api/threads status', res.status);
       if (!res.ok) {
-        const j = await res.json().catch(() => ({} as any));
+        const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        const msg = typeof j.message === 'string' ? j.message : typeof j.error === 'string' ? j.error : '通信エラー。再試行してください';
         console.error('[AppShell] createThread error:', j);
-        alert(j?.message || j?.error || "通信エラー。再試行してください");
+        alert(msg);
         return;
       }
-      const t = await res.json();
+      const t = (await res.json()) as { id: string; title?: string };
       console.log('[AppShell] thread created', t);
       // 楽観的にスレッド一覧に先頭追加（即時反映）
       globalMutate(
         '/api/threads',
-        (curr: any) => {
+        (curr?: { id: string; title?: string }[]) => {
           const list = Array.isArray(curr) ? curr : [];
-          // 重複防止
-          if (list.some((x: any) => x.id === t.id)) return list;
+          if (list.some((x) => x.id === t.id)) return list;
           return [t, ...list];
         },
         false

@@ -1,7 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
-// Database 型が無ければ any でOK
-export function createSupabaseBrowser() {
-  return createBrowserClient<any, 'fratabi'>(
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export function createSupabaseBrowser(): SupabaseClient<unknown, 'fratabi'> {
+  return createBrowserClient<unknown, 'fratabi'>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { db: { schema: 'fratabi' } }

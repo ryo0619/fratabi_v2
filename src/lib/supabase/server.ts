@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@supabase/supabase-js';
 
 // "fratabi" スキーマで型付け
-type Supa = SupabaseClient<any, 'fratabi'>;
+type Supa = SupabaseClient<unknown, 'fratabi'>;
 
 function makeClient(
   url: string,
@@ -17,7 +17,7 @@ function makeClient(
   }
 ): Supa {
   // 第二ジェネリクスに 'fratabi' を指定。db.schema も 'fratabi'
-  const client = createServerClient<any, 'fratabi'>(url, key, {
+  const client = createServerClient<unknown, 'fratabi'>(url, key, {
     cookies: {
       get: cookieImpl.get,
       set: cookieImpl.set ?? (() => {}),       // RSCではno-op
@@ -76,7 +76,7 @@ export function createSupabaseService(): Supa {
     process.env.SUPABASE_SERVICE_KEY ||
     '';
   if (!SERVICE_KEY) throw new Error('SUPABASE service role key is required on server.');
-  const client = createClient<any, 'fratabi'>(NEXT_PUBLIC_SUPABASE_URL!, SERVICE_KEY, {
+  const client = createClient<unknown, 'fratabi'>(NEXT_PUBLIC_SUPABASE_URL!, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     db: { schema: 'fratabi' },
   });

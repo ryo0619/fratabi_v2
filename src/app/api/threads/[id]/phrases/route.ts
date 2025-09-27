@@ -31,7 +31,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const items = data ?? [];
     const nextCursor = items.length ? `${items.at(-1)!.created_at}::${items.at(-1)!.id}` : null;
     return NextResponse.json({ items, nextCursor });
-  } catch (e: any) {
-    return NextResponse.json({ error: 'FATAL', message: e?.message ?? String(e) }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: 'FATAL', message: msg }, { status: 500 });
   }
 }

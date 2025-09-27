@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { PhraseRow } from "@/lib/history";
 
-export default function TranslationCard({ phrase }: { phrase: any }) {
+export default function TranslationCard({ phrase }: { phrase: PhraseRow }) {
   const [fav, setFav] = useState<boolean>(false);
   const [busy, setBusy] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
