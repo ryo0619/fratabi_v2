@@ -1,39 +1,22 @@
-"use client";
-import { useMemo, useState } from "react";
-import { createSupabaseBrowser } from "@/lib/supabase/browser";
+import LoginClient from "./LoginClient";
 
-export default function LoginPage() {
-  const supa = useMemo(() => createSupabaseBrowser(), []);
-  const [busy, setBusy] = useState(false);
+type SearchParams = Record<string, string | string[] | undefined>;
 
-  const signInGoogle = async () => {
-    try {
-      setBusy(true);
-      const redirectTo = `${location.origin}/auth/callback`;
-      const { data, error } = await supa.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-      if (error) throw error;
-      // data.url に遷移していく（SDKが自動でリダイレクト開始）
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert(`ログインに失敗しました: ${msg}`);
-      setBusy(false);
-    }
-  };
+export default function LoginPage({ searchParams }: { searchParams?: SearchParams }) {
+  const errorParam = searchParams?.error;
+  const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
 
   return (
     <div className="min-h-svh grid place-items-center p-6">
       <div className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-semibold">ログイン</h1>
-        <button
-          onClick={signInGoogle}
-          disabled={busy}
-          className="w-full rounded bg-black text-white py-2"
-        >
-          {busy ? "リダイレクト中…" : "Googleでログイン"}
-        </button>
+        {error && (
+          <p className="text-sm text-red-600">ログインに失敗しました: {error}</p>
+        )}
+        <LoginClient />
+        <noscript>
+          <p className="text-sm text-gray-600">※ JavaScript を有効にしてログインしてください。</p>
+        </noscript>
       </div>
     </div>
   );
