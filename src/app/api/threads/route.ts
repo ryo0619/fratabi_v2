@@ -54,15 +54,16 @@ export async function POST(req: Request) {
   const { title } = await req.json().catch(() => ({}));
   const safeTitle = (title ?? 'My phrases').toString().slice(0, 80);
 
-  const { data: t, error: e1 } = await supabase
-    .from('threads')
-    .insert({
-      owner_user_id: auth.user.id,
-      title: safeTitle,
-      archived: false,
-    })
-    .select('id, title')
-    .single();
+    const db = supabase as any;
+    const { data: t, error: e1 } = await db
+      .from('threads')
+      .insert({
+        owner_user_id: auth.user.id,
+        title: safeTitle,
+        archived: false,
+      })
+      .select('id, title')
+      .single();
 
   //if (e1) return NextResponse.json({ error: 'NETWORK', message: e1.message }, { status: 500 });
   if (e1) {
@@ -70,11 +71,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'NETWORK', message: e1.message }, { status: 500 });
   }
 
-  const { error: e2 } = await supabase.from('thread_members').upsert({
-    thread_id: t.id,
-    user_id: auth.user.id,
-    role: 'owner',
-  });
+    const { error: e2 } = await db.from('thread_members').upsert({
+      thread_id: t.id,
+      user_id: auth.user.id,
+      role: 'owner',
+    });
 
   //if (e2) return NextResponse.json({ error: 'NETWORK', message: e2.message }, { status: 500 });
   if (e2) {

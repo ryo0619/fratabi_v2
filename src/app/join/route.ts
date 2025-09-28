@@ -45,7 +45,8 @@ export async function GET(req: NextRequest) {
   }
 
   // 参加 upsert
-  await supabase.from('thread_members').upsert({
+  const db = supabase as any;
+  await db.from('thread_members').upsert({
     thread_id: payload.tid,
     user_id: auth.user.id,
     role: 'editor',
