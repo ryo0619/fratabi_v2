@@ -5,7 +5,7 @@ import { createSupabaseBrowser } from "@/lib/supabase/browser";
 export default function LoginClient() {
   async function signIn() {
     const supabase = createSupabaseBrowser();
-    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
