@@ -40,7 +40,7 @@ export async function GET() {
     return NextResponse.json((threads ?? []).map(t => ({ ...t, role: roles[t.id] ?? 'viewer' })));
   } catch (e: unknown) {
     console.error('[threads][GET] fatal:', e);
-    return NextResponse.json({ error: 'FATAL', message: e?.message ?? String(e) }, { status: 500 });
+    return NextResponse.json({ error: 'FATAL', message: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
 
@@ -87,6 +87,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: t.id, title: t.title });
   } catch (e: unknown) {
     console.error('[threads][POST] failed:', e);
-    return NextResponse.json({ error: 'NETWORK', message: String(e?.message || e) }, { status: 500 });
+    return NextResponse.json({ error: 'FATAL', message: e instanceof Error ? e.message : String(e) }, { status: 500 });
+
   }
 }

@@ -18,7 +18,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if (gErr || !row) return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
 
   // RLS下で削除（author/ownerのみ許可）
-  const { error: dErr } = await supabase.from('phrases').delete().eq('id', params.id);
+  const { error: dErr } = await supabase.from('phrases').delete().eq('id', (await params).id);
   if (dErr) {
     const status = dErr.code === '42501' ? 403 : 500;
     return NextResponse.json({ error: status === 403 ? 'FORBIDDEN' : 'NETWORK', message: dErr.message }, { status });
