@@ -3,9 +3,11 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types'
 
 // "fratabi" スキーマで型付け
-type Supa = SupabaseClient<unknown, 'fratabi'>;
+//type Supa = SupabaseClient<unknown, 'fratabi'>;
+type Supa = SupabaseClient<Database, 'fratabi'>
 
 function makeClient(
   url: string,
@@ -17,7 +19,7 @@ function makeClient(
   }
 ): Supa {
   // 第二ジェネリクスに 'fratabi' を指定。db.schema も 'fratabi'
-  const client = createServerClient<unknown, 'fratabi'>(url, key, {
+  const client = createServerClient<Database, 'fratabi'>(url, key, {
     cookies: {
       get: cookieImpl.get,
       set: cookieImpl.set ?? (() => {}),       // RSCではno-op
@@ -45,17 +47,21 @@ export async function createSupabaseRSC(): Promise<Supa> {
 
 /** Route Handler / Server Action 用（Cookie変更OK） */
 export async function createSupabaseRoute(): Promise<Supa> {
-  const store = await cookies(); // ← Promise を await
+  const store = await cookies(); // Next 15: Promise
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return makeClient(url, key, {
-    get: (name) => store.get(name)?.value,
-    set(name, value, options) {
-      store.set({ name, value, ...options });
+
+  return createServerClient<Database, 'fratabi'>(url, key, {
+    cookies: {
+      get: (name) => store.get(name)?.value,
+      set(name, value, options) {
+        store.set({ name, value, ...options });
+      },
+      remove(name, options) {
+        store.set({ name, value: '', ...options });
+      },
     },
-    remove(name, options) {
-      store.set({ name, value: '', ...options });
-    },
+    db: { schema: 'fratabi' },
   });
 }
 
@@ -69,18 +75,21 @@ export async function getUser() {
 
 /** Service Role（RLSバイパス：サーバ限定） */
 export function createSupabaseService(): Supa {
-  const { NEXT_PUBLIC_SUPABASE_URL } = process.env;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const SERVICE_KEY =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_ROLE ||
     process.env.SUPABASE_SERVICE_KEY ||
     '';
-  if (!SERVICE_KEY) throw new Error('SUPABASE service role key is required on server.');
-  const client = createClient<unknown, 'fratabi'>(NEXT_PUBLIC_SUPABASE_URL!, SERVICE_KEY, {
+
+  if (!SERVICE_KEY) {
+    throw new Error('SUPABASE service role key is required on server.');
+  }
+
+  return createClient<Database, 'fratabi'>(url, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     db: { schema: 'fratabi' },
   });
-  return client as Supa;
 }
 
 // 既存参照の後方互換エイリアス
