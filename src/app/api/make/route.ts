@@ -129,7 +129,8 @@ export async function POST(req: Request) {
 
     // 3b) users 行の存在保証（無ければ作る）
     await step('3.user.ensure', async () => {
-      const existing = ok<{ id: string } | null>('users.exists', await supabase
+      const db = supabase as any;
+      const existing = ok<{ id: string } | null>('users.exists', await db
         .from('users')
         .select('id')
         .eq('id', user.id)
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
 
       if (!existing) {
         // plan に NOT NULL がない想定。あれば { id: user.id, plan: 'free' } で。
-        const up = await supabase
+        const up = await db
           .from('users')
           .upsert({ id: user.id }, { onConflict: 'id' })
         if (up.error) throw up.error
@@ -146,6 +147,7 @@ export async function POST(req: Request) {
 
     // 4) スレッド解決（取得 or 自動作成）
     const resolvedThreadId = await step('4.thread.ensure', async () => {
+      const db = supabase as any;
       if (threadId) {
         const t = ok<{id:string}>('get thread', await supabase
           .from('threads')
@@ -155,27 +157,27 @@ export async function POST(req: Request) {
         if (!t) throw Object.assign(new Error('FORBIDDEN'), { status: 403 })
         return t!.id as string
       }
-      const own = ok('select threads', await supabase
+      const own = ok<Array<{ id: string }>>('select threads', await supabase
         .from('threads')
         .select('id')
         .eq('owner_user_id', user.id)
         .eq('archived', false)
         .order('created_at', { ascending: true })
         .limit(1))
-      if (Array.isArray(own) && own.length) return own[0].id as string
+      if (Array.isArray(own) && own.length) return own[0]!.id
 
-      const created = okOne<{ id: string }>('insert threads', await supabase
+      const created = okOne<{ id: string }>('insert threads', await db
         .from('threads')
         .insert({ owner_user_id: user.id, title: 'My phrases', archived: false })
         .select('id')
         .single())
 
       // 所有者をメンバーにも登録（失敗しても致命ではないため握る）
-      await supabase.from('thread_members').upsert({
+      await db.from('thread_members').upsert({
         thread_id: created.id, user_id: user.id, role: 'owner',
       })
-    return created.id
-    })
+      return created.id
+      })
 
     // 5) レート制限
     await step('5.rate-limit', async () => {
@@ -260,7 +262,24 @@ export async function POST(req: Request) {
     出力は常に**1行のJSON**。余計な空白・解説・改行は禁止。
     `
 
-    const prompt_en2fr =`
+    const en = await step('8.openai: ja->en', async () => {
+      const res = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: prompt_jp2en },
+          { role: 'user', content: jp },
+        ],
+        temperature: 0.2,
+      })
+      const enJson = JSON.parse(res.choices[0].message.content ?? '{}')
+      const out = String(enJson.en ?? '').trim()
+      if (!out) throw new Error('EMPTY_EN')
+      return out
+    })
+
+    // 9) OpenAI: EN->FR + Furigana
+    const prompt_en2fr = `
     以下の指示に厳密に従ってください。
     あなたは「日本からフランスへ旅行する日本人」向けの通訳です。日本語から翻訳された英語を、フランス本国（パリ）で自然・丁寧・口語的に使える短いフランス語へ訳し、日本人が読みやすいカタカナ発音も返します。出力は必ず次のJSONのみにします：
     {"fr":"...","furigana":"..."}
@@ -318,32 +337,13 @@ export async function POST(req: Request) {
     “C’est combien ?” を基本に、“Ça coûte combien ?” の多用を避ける。
     出力は常に1行のJSON。余計な空白・解説・改行は禁止。
     `
-    const en = await step('8.openai: ja->en', async () => {
-      const res = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: 'Output strict JSON: {"en": "..."}' },
-          { role: 'user', content: prompt_jp2en },
-        ],
-      })
-      const enJson = JSON.parse(res.choices[0].message.content ?? '{}')
-      const out = String(enJson.en ?? '').trim()
-      if (!out) throw new Error('EMPTY_EN')
-      return out
-    })
-
-    // 9) OpenAI: EN->FR + Furigana
-    const en2fr = `
-    
-    `
     const { fr, furigana } = await step('9.openai: en->fr+furigana', async () => {
       const res = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: 'Output strict JSON: {"fr":"...","furigana":"..."} Keep word spacing.' },
-          { role: 'user', content: prompt_en2fr },
+          { role: 'system', content: prompt_en2fr },
+          { role: 'user', content: en },
         ],
       })
       const frJson = JSON.parse(res.choices[0].message.content ?? '{}')
@@ -355,7 +355,8 @@ export async function POST(req: Request) {
 
     // 10) phrases INSERT（audio_urlは空で先行）
     const phrase = await step('10.db.insert: phrases', async () => {
-      const ins = okOne<{ id: string; created_at: string }>('insert phrases', await supabase
+      const db = supabase as any;
+      const ins = okOne<{ id: string; created_at: string }>('insert phrases', await db
         .from('phrases')
         .insert({
           thread_id: resolvedThreadId,
