@@ -5,19 +5,20 @@ const isProd = process.env.NODE_ENV === "production";
 
 const csp = [
   "default-src 'self'",
+  "base-uri 'self'",
   "img-src 'self' data: https://*.supabase.co",
-  "media-src https://*.supabase.co",
-  // HMRやSWR、Supabase、Stripe、OpenAI等の接続先
-  // devでは ws: wss: を許可（本番は不要だがあっても害なし）
+  "media-src 'self' https://*.supabase.co",
+  // 接続先（SWR, Supabase, OpenAI, Stripe など）
   "connect-src 'self' ws: wss: https://api.openai.com https://*.supabase.co https://api.stripe.com",
-  // Next dev では eval が必要（本番は付けなくてもOK）
-  // dev でも script-src を明示しないなら default-src が適用されるが、
-  // ここでは明示しておく
-  // ※ 本番は script-src を明示しない（default-src に任せる）でも可
-  // ただしここでは簡単に両環境共通で許容しておく
-  "script-src 'self' 'unsafe-eval'",
-  // Tailwind等のスタイルを安定させる
+  // Next.js のRSC/ハイドレーションや各種ワーカーに必要
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+  "worker-src 'self' blob:",
+  // スタイル
   "style-src 'self' 'unsafe-inline'",
+  // OAuth等の外部フレーム
+  "frame-src https://accounts.google.com https://*.supabase.co",
+  // フォント
+  "font-src 'self' data:",
 ].join("; ");
 
 const nextConfig: NextConfig = {
