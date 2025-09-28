@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import type { PhraseRow } from '@/lib/history';
 
 export const runtime = 'nodejs';
 
@@ -24,11 +25,9 @@ export async function GET(req: Request) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: 'NETWORK', message: error.message }, { status: 500 });
-
-  const items = (data ?? []).map(r => ({
-    created_at: r.created_at,
-    card: r.phrases,
-  }));
+  type FavJoined = { created_at: string; card_id: string; phrases: PhraseRow };
+  const rows = (data ?? []) as unknown as FavJoined[];
+  const items = rows.map(r => ({ created_at: r.created_at, card: r.phrases }));
   const nextCursor = items.length ? items.at(-1)!.created_at : null;
   return NextResponse.json({ items, nextCursor });
 }
