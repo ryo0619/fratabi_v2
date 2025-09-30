@@ -1,27 +1,47 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PhraseRow } from "@/lib/history";
+import { fav_get, fav_remove, fav_upsert } from "@/lib/favoritesStore";
 
-export default function TranslationCard({ phrase }: { phrase: PhraseRow }) {
+export default function TranslationCard({ phrase, onUnfavorite }: { phrase: PhraseRow; onUnfavorite?: (id: string) => void }) {
   const [fav, setFav] = useState<boolean>(false);
   const [busy, setBusy] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
 
+  // 初期化：オフライン保存の有無からfav状態を復元
+  useEffect(() => {
+    let mounted = true;
+    fav_get(phrase.id).then((v) => {
+      if (mounted) setFav(!!v);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [phrase.id]);
+
   async function toggleFav() {
     setBusy(true);
     try {
+      const offline = typeof navigator !== 'undefined' && !navigator.onLine;
       if (!fav) {
-        await fetch("/api/favorite", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cardId: phrase.id }),
-        });
+        if (!offline) {
+          await fetch("/api/favorite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cardId: phrase.id }),
+          });
+        }
+        await fav_upsert(phrase);
         setFav(true);
       } else {
-        await fetch(`/api/favorite/${phrase.id}`, { method: "DELETE" });
+        if (!offline) {
+          await fetch(`/api/favorite/${phrase.id}`, { method: "DELETE" });
+        }
+        await fav_remove(phrase.id);
         setFav(false);
+        onUnfavorite?.(phrase.id);
       }
     } finally {
       setBusy(false);
@@ -32,6 +52,8 @@ export default function TranslationCard({ phrase }: { phrase: PhraseRow }) {
     if (!confirm("このカードを削除します。よろしいですか？")) return;
     const res = await fetch(`/api/phrases/${phrase.id}`, { method: "DELETE" });
     if (res.ok) {
+      // お気に入りにもあれば削除
+      try { await fav_remove(phrase.id); } catch {}
       // 楽観的にDOMから外す
       const el = document.getElementById(`card-${phrase.id}`);
       el?.remove();

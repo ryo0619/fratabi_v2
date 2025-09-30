@@ -5,6 +5,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import useSWR from "swr";
 import { useThreadSelection } from "../threads/ThreadContext";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -33,6 +34,8 @@ const fetcher = async (url: string) => {
 export default function Drawer({ open, onClose, onCreateThread }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
@@ -85,7 +88,7 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         className={clsx(
-          "absolute left-0 top-0 h-full w-80 max-w-[88vw] bg-white shadow-xl border-r border-gray-200",
+          "absolute left-0 top-0 h-full w-80 max-w-[88vw] bg-white shadow-xl border-r border-gray-200 flex flex-col",
           "transition-transform duration-300 will-change-transform",
           open ? "translate-x-0" : "-translate-x-full"
         )}
@@ -109,18 +112,19 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
             </svg>
           </button>
         </div>
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100%-56px)]">
-          <button
-            type="button"
-            onClick={() => {
-              console.log("[Drawer] createThread clicked");
-              onCreateThread();
-            }}
-            className="w-full text-left px-3 py-3 rounded-xl hover:bg-gray-100"
-            aria-label="新しいスレッドを作成"
-          >
-            ✏️ 新しいスレッド
-          </button>
+        <div className="flex-1 overflow-y-auto">
+          <nav className="p-3 space-y-1">
+            <button
+              type="button"
+              onClick={() => {
+                console.log("[Drawer] createThread clicked");
+                onCreateThread();
+              }}
+              className="w-full text-left px-3 py-3 rounded-xl hover:bg-gray-100"
+              aria-label="新しいスレッドを作成"
+            >
+              ✏️ 新しいスレッド
+            </button>
 
           <Link
             className="block px-3 py-3 rounded-xl hover:bg-gray-100"
@@ -129,16 +133,19 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
           >
             ⭐️ お気に入り
           </Link>
+
+            <ThreadsList open={open} onClose={onClose} />
+          </nav>
+        </div>
+        <div className="border-t p-3 bg-white">
           <Link
             className="block px-3 py-3 rounded-xl hover:bg-gray-100"
             href="/settings"
             onClick={onClose}
           >
-            設定
+            ⚙️ 設定
           </Link>
-
-          <ThreadsList open={open} onClose={onClose} />
-        </nav>
+        </div>
       </div>
     </div>
   );
@@ -146,6 +153,8 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
 
 function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { selectedThreadId, setSelectedThreadId } = useThreadSelection();
+  const router = useRouter();
+  const pathname = usePathname();
   const { data, error, isLoading, mutate } = useSWR<Thread[]>("/api/threads", fetcher, {
     shouldRetryOnError: false,
   });
@@ -216,6 +225,7 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
             onClick={() => {
               setSelectedThreadId(t.id);
               onClose();
+              if (pathname !== "/") router.push("/");
             }}
             className="min-w-0 flex-1 text-left px-1 py-1 rounded"
           >
