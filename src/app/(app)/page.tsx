@@ -53,34 +53,36 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-[720px] px-4 pb-24">
-        <form onSubmit={submit} className="grid gap-3">
-          <textarea
-            value={jp}
-            onChange={(e) => setJp(e.target.value)}
-            placeholder="日本語を入力（例：地下鉄の駅はどこですか？）"
-            rows={3}
-            className="w-full resize-y rounded-xl border border-neutral-200 bg-white p-3 text-base shadow-sm outline-none ring-0 focus:border-neutral-300"
-          />
-          <button
-            disabled={busy || !jp.trim()}
-            className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:opacity-50"
-          >
-            {busy ? "生成中..." : "翻訳&音声生成"}
-          </button>
-        </form>
+      <form onSubmit={submit} className="grid gap-3">
+        <textarea
+          value={jp}
+          onChange={(e) => setJp(e.target.value)}
+          placeholder="日本語を入力（例：地下鉄の駅はどこですか？）"
+          rows={3}
+          className="w-full resize-y rounded-xl border border-neutral-200 bg-white p-3 text-base shadow-sm outline-none ring-0 focus:border-neutral-300"
+        />
+        <button
+          disabled={busy || !jp.trim()}
+          className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:opacity-50"
+        >
+          {busy ? "生成中..." : "翻訳"}
+        </button>
+      </form>
 
-        {/* 選択スレッドのカード一覧 */}
-        <div className="mt-6 space-y-3">
-          {phrases.map((p: PhraseRow) => (
-            <TranslationCard key={p.id} phrase={p} />
-          ))}
-          {selectedThreadId && phrases.length === 0 && (
-            <div className="text-sm text-gray-500">このスレッドにはまだカードがありません</div>
-          )}
-          {!selectedThreadId && (
-            <div className="text-sm text-gray-500">スレッドがありません。送信すると自動で作成されます</div>
-          )}
-        </div>
+      {/* 選択スレッドのカード一覧 */}
+      <div className="mt-6 space-y-3">
+        {phrases.map((p: PhraseRow) => (
+          <TranslationCard key={p.id} phrase={p} />
+        ))}
+        {selectedThreadId && phrases.length === 0 && (
+          <div className="text-sm text-gray-500">このスレッドにはまだカードがありません</div>
+        )}
+        {!selectedThreadId && (
+          <div className="text-sm text-gray-500">
+            スレッドがありません。送信すると自動で作成されます
+          </div>
+        )}
+      </div>
     </main>
   );
 }

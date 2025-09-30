@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSWRConfig } from "swr";
 import AppHeader from "./AppHeader";
+import PageBackground from "./PageBackground";
 import Drawer from "./Drawer";
 import { useThreadSelection } from "../threads/ThreadContext";
 
@@ -50,10 +51,13 @@ function ShellInner({ children }: Props) {
   }
 
   return (
-    <div className="min-h-dvh bg-gray-50 text-gray-900 w-full">
-      <AppHeader onMenuClick={() => setOpen(true)} />
-      <Drawer open={open} onClose={() => setOpen(false)} onCreateThread={createThread} />
-      <main className="mx-auto max-w-screen-lg px-4 py-6">{children}</main>
+    <div className="relative min-h-dvh text-gray-900 w-full">
+      <PageBackground />
+      <div className="relative">
+        <AppHeader onMenuClick={() => setOpen(true)} />
+        <Drawer open={open} onClose={() => setOpen(false)} onCreateThread={createThread} />
+        <main className="mx-auto max-w-screen-lg px-4 pt-20 pb-6">{children}</main>
+      </div>
     </div>
   );
 }
