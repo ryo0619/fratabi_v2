@@ -24,9 +24,15 @@ export async function GET(req: Request) {
   const supabase = createServerClient<Database, 'fratabi'>(supabaseUrl, anonKey, {
     db: { schema: 'fratabi' },
     cookies: {
-      get: (name) => cookieStore.get(name)?.value,
-      set: (name, value, options) => redirectResponse.cookies.set({ name, value, ...options }),
-      remove: (name, options) => redirectResponse.cookies.set({ name, value: '', ...options }),
+      get(name) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name, value, options) {
+        cookieStore.set({ name, value, ...options });
+      },
+      remove(name, options) {
+        cookieStore.set({ name, value: '', ...options });
+      },
     },
   });
 
