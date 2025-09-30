@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import AppHeader from "./AppHeader";
 import PageBackground from "./PageBackground";
@@ -13,6 +14,8 @@ function ShellInner({ children }: Props) {
   const [open, setOpen] = useState(false);
   const { setSelectedThreadId } = useThreadSelection();
   const { mutate: globalMutate } = useSWRConfig();
+  const router = useRouter();
+  const pathname = usePathname();
 
   async function createThread() {
     try {
@@ -44,6 +47,7 @@ function ShellInner({ children }: Props) {
       );
       setSelectedThreadId(t.id);
       setOpen(false);
+      if (pathname !== "/") router.push("/");
     } catch (e) {
       console.error('[AppShell] createThread exception', e);
       alert('ネットワークエラー。コンソールを確認してください');
