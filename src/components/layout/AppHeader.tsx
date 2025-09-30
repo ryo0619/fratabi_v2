@@ -9,7 +9,7 @@ type Props = {
 export default function AppHeader({ onMenuClick }: Props) {
   return (
     <header
-      className="sticky top-0 z-50 h-14 bg-white/90 backdrop-blur border-b border-gray-200"
+      className="fixed top-0 left-0 right-0 z-50 h-14 bg-white/85 backdrop-blur border-b border-gray-200"
       aria-label="アプリのヘッダー"
     >
       <div className="mx-auto max-w-screen-lg h-full px-4 flex items-center gap-3">
