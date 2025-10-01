@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { PhraseRow } from "@/lib/history";
 import { fav_get, fav_remove, fav_upsert } from "@/lib/favoritesStore";
 
-export default function TranslationCard({ phrase, onUnfavorite }: { phrase: PhraseRow; onUnfavorite?: (id: string) => void }) {
+export default function TranslationCard({
+  phrase,
+  onUnfavorite,
+}: {
+  phrase: PhraseRow;
+  onUnfavorite?: (id: string) => void;
+}) {
   const [fav, setFav] = useState<boolean>(false);
   const [busy, setBusy] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -24,7 +30,7 @@ export default function TranslationCard({ phrase, onUnfavorite }: { phrase: Phra
   async function toggleFav() {
     setBusy(true);
     try {
-      const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const offline = typeof navigator !== "undefined" && !navigator.onLine;
       if (!fav) {
         if (!offline) {
           await fetch("/api/favorite", {
@@ -53,7 +59,9 @@ export default function TranslationCard({ phrase, onUnfavorite }: { phrase: Phra
     const res = await fetch(`/api/phrases/${phrase.id}`, { method: "DELETE" });
     if (res.ok) {
       // お気に入りにもあれば削除
-      try { await fav_remove(phrase.id); } catch {}
+      try {
+        await fav_remove(phrase.id);
+      } catch {}
       // 楽観的にDOMから外す
       const el = document.getElementById(`card-${phrase.id}`);
       el?.remove();
@@ -116,7 +124,9 @@ export default function TranslationCard({ phrase, onUnfavorite }: { phrase: Phra
           disabled={!phrase.audio_url}
           aria-label="再生"
           className={`grid size-10 place-items-center rounded-full border ${
-            phrase.audio_url ? "bg-neutral-900 text-white border-neutral-900" : "bg-gray-200 text-gray-400 border-gray-200"
+            phrase.audio_url
+              ? "bg-neutral-900 text-white border-neutral-900"
+              : "bg-gray-200 text-gray-400 border-gray-200"
           }`}
           title="再生"
         >
@@ -141,12 +151,16 @@ export default function TranslationCard({ phrase, onUnfavorite }: { phrase: Phra
           className="grid size-10 place-items-center rounded-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
-            <path d="M3 6h18M9 6v12m6-12v12M5 6l1.5 14A2 2 0 0 0 8.5 22h7a2 2 0 0 0 2-2L19 6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M3 6h18M9 6v12m6-12v12M5 6l1.5 14A2 2 0 0 0 8.5 22h7a2 2 0 0 0 2-2L19 6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
-        <span className="ml-auto text-xs text-gray-500">
-          {new Date(phrase.created_at).toLocaleString()}
-        </span>
       </div>
     </div>
   );

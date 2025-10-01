@@ -254,6 +254,8 @@ export async function POST(req: Request) {
       → {"en":"Excuse me, the menu, please."}
     5.日本語：「空港までいくらくらいかかりますか？」
       → {"en":"How much does it cost to the airport?"}
+    6.日本語：「お水をもらえますか？」
+      → {"en":"Could I have some tap water, please?"}
 
     ##補足
     代替案を並記しない（**1つに確定**）。
@@ -330,6 +332,8 @@ export async function POST(req: Request) {
       → {"fr":"Excusez-moi, la carte s’il vous plaît.","furigana":"エクスキュゼ モワ、ラ カルト シル ヴ プレ。"}
     5.英語：「How much does it cost to the airport?」
       → {"fr":"Ça coûte combien jusqu’à l’aéroport ?","furigana":"サ クート コンビアン ジュスカ レアロポール？"}
+    6.英語：「Could I have some tap water, please?」
+      → {"fr":"Une carafe d’eau, s’il vous plaît.","furigana":"ユヌ カラフ ドー、シル ヴ プレ"}
 
     ##補足
     代替案は並記せず1つに確定。

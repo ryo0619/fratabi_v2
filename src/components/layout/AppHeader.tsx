@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { garamond, decol, zenMaru } from "@/lib/fonts";
 
 type Props = {
   onMenuClick: () => void;
@@ -26,7 +27,7 @@ export default function AppHeader({ onMenuClick }: Props) {
             <span className="block h-0.5 bg-gray-800 rounded"></span>
           </div>
         </button>
-        <h1 className="text-lg font-semibold tracking-wide">フラたび</h1>
+        <h1 className={`${zenMaru.className} text-lg font-semibold tracking-wide`}>フラたび</h1>
       </div>
     </header>
   );

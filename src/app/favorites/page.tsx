@@ -9,7 +9,8 @@ import { fav_bulkUpsert, fav_getAll } from "@/lib/favoritesStore";
 type FavItem = { card: PhraseRow; created_at?: string };
 type FavPage = { items: FavItem[]; nextCursor: string | null };
 
-const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json() as Promise<FavPage>);
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((r) => r.json() as Promise<FavPage>);
 const getKey = (index: number, prev: FavPage | null) => {
   if (prev && !prev.nextCursor) return null;
   const cursor = index === 0 ? "" : `?cursor=${encodeURIComponent(prev!.nextCursor as string)}`;
@@ -24,7 +25,9 @@ export default function FavoritesPage() {
   // 1) IndexedDB から初期値を読み込み（オフラインでも表示）
   const [cached, setCached] = useState<PhraseRow[] | null>(null);
   useEffect(() => {
-    fav_getAll().then(setCached).catch(() => setCached([]));
+    fav_getAll()
+      .then(setCached)
+      .catch(() => setCached([]));
   }, []);
 
   // 2) オンライン時は取得できたデータをキャッシュに反映
@@ -36,9 +39,14 @@ export default function FavoritesPage() {
   }, [onlineItems]);
 
   // 3) 表示するリスト（オンライン: API、オフライン: キャッシュ）
-  const baseItems: PhraseRow[] = onlineItems.length ? onlineItems.map((it) => it.card) : cached ?? [];
+  const baseItems: PhraseRow[] = onlineItems.length
+    ? onlineItems.map((it) => it.card)
+    : cached ?? [];
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
-  const showItems: PhraseRow[] = useMemo(() => baseItems.filter((c) => !hiddenIds.has(c.id)), [baseItems, hiddenIds]);
+  const showItems: PhraseRow[] = useMemo(
+    () => baseItems.filter((c) => !hiddenIds.has(c.id)),
+    [baseItems, hiddenIds]
+  );
   const handleUnfavorite = (id: string) => setHiddenIds((prev) => new Set(prev).add(id));
 
   const hasMore = !!(data && data.at(-1)?.nextCursor);
