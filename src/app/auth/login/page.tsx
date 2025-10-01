@@ -1,11 +1,12 @@
 import LoginClient from "./LoginClient";
 import PageBackground from "@/components/layout/PageBackground";
-import { garamond, decol, zenMaru } from "@/app/layout";
+import { garamond, decol, zenMaru } from "@/lib/fonts";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function LoginPage({ searchParams }: { searchParams?: SearchParams }) {
-  const errorParam = searchParams?.error;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+  const errorParam = sp?.error;
   const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
 
   return (

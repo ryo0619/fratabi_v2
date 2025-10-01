@@ -50,6 +50,10 @@ export async function GET(req: Request) {
     console.error('[callback] users upsert error:', up.error);
   }
 
-  // 3) ホームへ（Set-Cookie付きのレスポンスを返す）
-  return redirectResponse;
+  // 3) スプラッシュへ（Set-Cookie付きのレスポンスを返す）
+  const splash = NextResponse.redirect(`${origin}/splash`);
+  // cookieStore へ set 済みのCookieは自動的にレスポンスへ反映される
+  // ただし一部環境で付与が弱い場合に備え、redirectResponse に設定済みのCookieを統合
+  redirectResponse.cookies.getAll().forEach((c) => splash.cookies.set(c));
+  return splash;
 }
