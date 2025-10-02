@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { garamond, decol, zenMaru } from "@/lib/fonts";
+import { zenMaru } from "@/lib/fonts";
 
 type Props = {
   onMenuClick: () => void;
