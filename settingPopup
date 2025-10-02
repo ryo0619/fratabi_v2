@@ -1,0 +1,178 @@
+ゴール
+
+片手操作・可読性を最優先にした設定画面（2カラム：左ナビ／右コンテンツ）。
+
+shadcn/uiの既存コンポーネントを極力再利用し、保守しやすい設計。
+
+将来のStripe課金・使用回数カウント・招待などと整合が取れる情報設計。
+
+「Parisian Signage」テイスト（温白背景＋濃紺／ボルドー、薄い縁・角丸・間伸びしない余白）に寄せる。
+
+情報設計 / ルーティング
+
+ルート構成
+
+/settings → SettingsLayout（共通 AppShell／サイドバー）
+
+/settings/account（アカウント）
+
+/settings/plan（プラン）
+
+/settings/logout（ログアウト）
+
+画面遷移
+
+左サイドバーの選択状態を保持。モバイルはSheet（全画面ドロワー）で開閉。
+
+データ取得
+
+RSCでサーバー取得（セッション、プロフィール、使用回数/上限、サブスク状態）。
+
+変更操作はServer Actions（成功後revalidatePathで即反映）。
+
+ビジュアル / テーマ
+
+TailwindのCSS変数でshadcnテーマを微調整：
+
+--background: #F7F2E9（温白） / --foreground: #111（温黒）
+
+--primary: #0E2940（深紺） / --destructive: #8C1D2E（ボルドー）
+
+--muted: #6B7280（補助）
+
+角丸はmd（~12px）、ボーダーは0.5–1pxの薄線、影は極薄。
+
+8ptグリッド、行高ゆったり、本文はInter/Noto Sans JP。
+
+コンポーネント対応（shadcn/ui）
+
+レイアウト：ResizablePanel or 自作2カラム、Separator、ScrollArea
+
+ナビ：Button（variant: ghost）＋Navigation風、選択中のみ淡色背景
+
+タイポ：Typographyスケール（h3/mutedなど）
+
+フォーム：Form+FormField+Input+Label+Textarea（react-hook-form前提）
+
+アクション：Button（default=紺、secondary=グレー、destructive=ボルドー）
+
+モーダル：Dialog（編集）/ AlertDialog（キャンセル確認）
+
+トースト：useToast（保存完了／エラー表示）
+
+空／ローディング：Skeleton、Callout的なAlert
+
+画面ごとの仕様
+1) アカウント /settings/account
+
+レイアウト：右ペインに2行の情報行（画像の雰囲気を踏襲）。
+
+行はCardまたはdiv+Separatorでラベル｜値｜「変更」ボタンの3分割。
+
+フィールド
+
+表示名（例：フラたび 太郎）
+
+「変更」でDialogを開き、Input＋保存/キャンセル。
+
+バリデーション：2–32字、先頭終端スペースtrim、NG文字禁止（zod）。
+
+メールアドレス
+
+「変更」でDialog。AuthのupdateUser({email})を呼ぶ。確認メール案内のAlertを同時表示。
+
+余談：添付の1枚目は「メールアドレス」の値が回数表示になっているように見えるが、実装は正しい値＝メールを出し、回数はプラン画面で扱う方が一貫する（希望があれば合わせて表示）。
+
+2) プラン /settings/plan
+
+上部：ご利用回数 10回／20回（今月の使用数／上限）。
+
+サブ：自動更新日やプラン名の軽い説明（2行まで）。
+
+アクション
+
+アップグレード：
+
+有料未加入 → Stripe Checkout（リンク or サーバーでセッション作成→redirect）。
+
+加入済 → Stripe Customer Portalへのリンク。
+
+キャンセル：AlertDialogで確認→Server ActionでStripeのサブスク変更→トースト→再読み込み。
+
+例外表示
+
+オフライン／Stripe APIエラー時はAlertで1行＋再試行ボタン。
+
+3) ログアウト /settings/logout
+
+サーバー側でsupabase.auth.signOut()→**「ログアウトしました」**の完了画面。
+
+ボタン：「ログイン画面へ」（/auth/loginへ）。
+
+左ナビはグレーアウト（操作不可）。アクセシビリティのためaria-disabledを指定。
+
+データ / サーバーアクション
+
+認証
+
+getSessionをRSCで取得、未ログインはredirect('/auth/login')。
+
+プロフィール
+
+profilesテーブル（id, display_name, email）をRLSで保護。
+
+表示名更新：update profiles set display_name = $1 where id = auth.uid()
+
+使用回数
+
+① usage_countersテーブル（月別合算）を持つ or ② phrase_logsから今月分を集計（count(*) filter by month(now())）。
+
+上限はplans or profiles.planで管理（free=20, pro=100 など）。
+
+Stripe
+
+“アップグレード”：CheckoutセッションをServer Actionで作成→URLへ遷移。
+
+“キャンセル”：Portalでユーザー自身に委ねるか、Server Actionでサブスク更新。
+
+Webhookでサブスク状態・上限を更新（planフィールドや上限値を反映）。
+
+状態管理 / フィードバック
+
+すべての更新は楽観的UI＋失敗時ロールバック（トーストで通知）。
+
+読み込み時は右ペインにSkeleton（タイトル・2行・ボタン）。
+
+フォーム送信中はボタンにスピナー＋二重送信防止（disabled）。
+
+エラー文は1行短文＋再試行の導線。
+
+レスポンシブ
+
+lg以上：左ナビ固定（幅 240–280px）、右ペインはmax-w 960–1040。
+
+md未満：左ナビはSheetでハンバーガー開閉、右ペインは単一カラム。
+
+タップ領域44px以上、フォントサイズは最小14pxを下回らない。
+
+アクセシビリティ
+
+見出し階層（h1=ページタイトル、h2=セクション）。
+
+aria-current="page"で現在地、ダイアログはrole="dialog"＋初期フォーカス。
+
+ラベルは<Label htmlFor>で明示、ボタンは日本語ラベルを本文で記載（アイコンだけにしない）。
+
+QAチェックリスト（抜粋）
+
+未ログインで/settings/*へ → ログイン画面へ誘導。
+
+表示名を変更 → 右ペイン・ヘッダーの表示名が即時更新。
+
+メール変更 → 確認メール説明のAlert表示。
+
+無課金ユーザー → アップグレードでCheckoutへ。
+
+課金ユーザー → Portalへ遷移し、戻ると状態が同期（Webhook or 再取得）。
+
+ログアウト → 左ナビ無効化＋ボタンでログインへ。
