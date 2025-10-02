@@ -34,8 +34,7 @@ const fetcher = async (url: string) => {
 export default function Drawer({ open, onClose, onCreateThread }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
+  // navigation hooks are used in ThreadsList; keep imports at file-scope
 
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
