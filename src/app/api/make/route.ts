@@ -12,25 +12,46 @@ export const revalidate = 0
 // ==== logging helpers ====
 const _startedAt = Date.now()
 const _reqId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-  ? (crypto as any).randomUUID().slice(0, 8)
+  ? (crypto as Crypto).randomUUID().slice(0, 8)
   : Math.random().toString(36).slice(2, 10)
 
 function ms() { return `${Date.now() - _startedAt}ms` }
-function safeErr(e: any) {
-  const o: any = {
-    name: e?.name,
-    message: e?.message || String(e),
-    status: e?.status ?? e?.code ?? e?.error?.code,
-    hint: e?.hint,
-    details: e?.details || e?.error?.message,
-    type: e?.type,
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+function getProp<T>(obj: unknown, key: string): T | undefined {
+  if (!isObject(obj)) return undefined
+  return (obj as Record<string, unknown>)[key] as T | undefined
+}
+
+function safeErr(e: unknown) {
+  const name = getProp<unknown>(e, 'name')
+  const messageProp = getProp<unknown>(e, 'message')
+  const statusProp = getProp<unknown>(e, 'status')
+  const codeProp = getProp<unknown>(e, 'code')
+  const hint = getProp<unknown>(e, 'hint')
+  const detailsProp = getProp<unknown>(e, 'details')
+  const errorObj = getProp<unknown>(e, 'error')
+  const errorCode = getProp<unknown>(errorObj, 'code')
+  const errorMessage = getProp<unknown>(errorObj, 'message')
+
+  const o: Record<string, unknown> = {
+    name: typeof name === 'string' ? name : undefined,
+    message: typeof messageProp === 'string' ? messageProp : String(e),
+    status: statusProp ?? codeProp ?? errorCode,
+    hint,
+    details: detailsProp ?? errorMessage,
+    type: getProp<unknown>(e, 'type'),
   }
-  if (o.details && typeof o.details === 'string' && o.details.length > 300) {
+  if (typeof o.details === 'string' && o.details.length > 300) {
     o.details = o.details.slice(0, 300) + '…'
   }
   return o
 }
-function log(tag: string, payload?: any) {
+
+function log(tag: string, payload?: unknown) {
   if (payload !== undefined) console.log(`[make ${_reqId}] ${ms()} ${tag}`, payload)
   else console.log(`[make ${_reqId}] ${ms()} ${tag}`)
 }
@@ -47,17 +68,21 @@ async function step<T>(label: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 // 非 null を保証したい場面用（.single() の結果など）
-function ok<T>(label: string, res: { data: T | null; error: any }): T | null {
+function ok<T>(label: string, res: { data: T | null; error: unknown }): T | null {
   if (res.error) {
-    throw Object.assign(new Error(`${label}: ${res.error.message || 'supabase error'}`), res.error)
+    const msg = getProp<string>(res.error, 'message') ?? 'supabase error'
+    const assignSrc = isObject(res.error) ? res.error : {}
+    throw Object.assign(new Error(`${label}: ${msg}`), assignSrc)
   }
   return res.data as T | null
 }
 
 // 非 null を保証したい場面用（.single() の結果など）
-function okOne<T>(label: string, res: { data: T | null; error: any }): T {
+function okOne<T>(label: string, res: { data: T | null; error: unknown }): T {
   if (res.error) {
-    throw Object.assign(new Error(`${label}: ${res.error.message || 'supabase error'}`), res.error)
+    const msg = getProp<string>(res.error, 'message') ?? 'supabase error'
+    const assignSrc = isObject(res.error) ? res.error : {}
+    throw Object.assign(new Error(`${label}: ${msg}`), assignSrc)
   }
   if (res.data == null) {
     throw Object.assign(new Error(`${label}: not_found`), { status: 404 })
@@ -93,7 +118,7 @@ export async function POST(req: Request) {
   log('HIT /api/make', { url: req.url })
   try {
     // 1) 入力
-    const raw = await step('1.parse: json', async () => await req.json().catch(() => ({} as any)))
+    const raw = await step('1.parse: json', async () => await req.json().catch(() => ({} as Record<string, unknown>)))
     // UIが text を送っている可能性に対応（jp 優先, 無ければ text）
     const jp = String(
       typeof raw?.jp === 'string' ? raw.jp :
@@ -398,9 +423,18 @@ export async function POST(req: Request) {
       const url = pub.publicUrl
 
       // audio_url 更新（Service Role; スキーマ固定で安全）
-      const updater = (service as any).schema ? (service as any).schema('fratabi') : service
+      type HasSchema<T> = T & { schema?: (name: string) => T }
+      function hasSchema<T extends object>(s: T): s is T & { schema: (name: string) => T } {
+        return typeof (s as Record<string, unknown>)['schema'] === 'function'
+      }
+      function hasError(x: unknown): x is { error: unknown } {
+        return typeof x === 'object' && x !== null && 'error' in x
+      }
+
+      const svc = service as HasSchema<typeof service>
+      const updater = hasSchema(svc) ? svc.schema('fratabi') : service
       const upd = await updater.from('phrases').update({ audio_url: url }).eq('id', phrase.id)
-      if ((upd as any)?.error) throw (upd as any).error
+      if (hasError(upd) && upd.error) throw upd.error
 
       return url
     })
@@ -415,9 +449,13 @@ export async function POST(req: Request) {
       tts_url: ttsUrl,
       created_at: phrase.created_at,
     }, { status: 200 })
-  } catch (e: any) {
+  } catch (e) {
     console.error('[make] fatal:', e)
-    const status = e?.status && Number.isInteger(e.status) ? e.status : 500
-    return NextResponse.json({ error: e?.message || 'FATAL' }, { status })
+    const statusRaw = getProp<unknown>(e, 'status')
+    const status = typeof statusRaw === 'number' && Number.isInteger(statusRaw) ? statusRaw : 500
+    const message = e instanceof Error
+      ? e.message
+      : (getProp<string>(e, 'message') ?? 'FATAL')
+    return NextResponse.json({ error: message }, { status })
   }
 }

@@ -144,6 +144,13 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
           >
             ⚙️ 設定
           </Link>
+          <Link
+            className="mt-1 block px-3 py-3 rounded-xl hover:bg-gray-100"
+            href="/settings/plan"
+            onClick={onClose}
+          >
+            💳 プラン / 課金
+          </Link>
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { useThreadSelection } from "@/components/threads/ThreadContext";
-import { garamond, decol, zenMaru } from "@/lib/fonts";
+import { zenMaru } from "@/lib/fonts";
 
 type Thread = { id: string; title?: string };
 type BootstrapPayload = { threads: Thread[] };
