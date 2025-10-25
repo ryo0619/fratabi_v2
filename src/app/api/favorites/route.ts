@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   // 直接JOIN（関係定義がある前提）。なければ2段クエリに変更
   let query = supabase
     .from('favorites')
-    .select('created_at, card_id, phrases!inner(*)')
+    .select('created_at, card_id, phrases!inner(id,jp,fr,furigana,audio_url,created_at)')
     .eq('user_id', auth.user.id)
     .order('created_at', { ascending: false })
     .limit(limit);

@@ -1,88 +1,53 @@
-"use client";
+import { createSupabaseRSC } from "@/lib/supabase/server";
+import HomeClient from "./HomeClient";
 
-import useSWR from "swr";
-import { useEffect, useMemo, useState } from "react";
-import TranslationCard from "@/components/cards/TranslationCard";
-import type { PhraseRow } from "@/lib/history";
-import { useThreadSelection } from "@/components/threads/ThreadContext";
+export default async function Home() {
+  const supabase = await createSupabaseRSC();
+  const { data: auth } = await supabase.auth.getUser();
 
-const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
-// type Thread = { id: string; title: string };
+  // スレッド一覧（最近順）
+  let threads: { id: string; title: string; created_at?: string }[] = [];
+  if (auth.user) {
+    const { data: memberRows } = await supabase
+      .from("thread_members")
+      .select("thread_id")
+      .eq("user_id", auth.user.id);
 
-export default function Home() {
-  const { data: threads } = useSWR(`/api/threads`, fetcher);
-  const { selectedThreadId, setSelectedThreadId } = useThreadSelection();
-  const [jp, setJp] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (threads && threads.length && !selectedThreadId) setSelectedThreadId(threads[0].id);
-  }, [threads, selectedThreadId, setSelectedThreadId]);
-
-  const phrasesKey = selectedThreadId ? `/api/threads/${selectedThreadId}/phrases?limit=20` : null;
-  const { data: phrasesPage, mutate: mutatePhrases } = useSWR(phrasesKey, fetcher);
-  const phrases = useMemo(() => phrasesPage?.items ?? [], [phrasesPage]);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!jp.trim()) return;
-    setBusy(true);
-    const res = await fetch(`/api/make`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jp, threadId: selectedThreadId }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      const t = await res.json();
-      setJp("");
-      // 新規スレッドが作成された場合は選択を更新
-      if (!selectedThreadId && t?.thread_id) {
-        setSelectedThreadId(t.thread_id);
-      }
-      // 画面遷移せず、カード一覧だけ更新
-      await mutatePhrases();
-    } else {
-      const j = await res.json().catch(() => ({}));
-      if (j?.error === "LIMIT_REACHED") {
-        alert("上限に達しました。プランをアップグレードしてください");
-      } else {
-        alert("通信エラー。再試行してください");
-      }
+    const ids = Array.from(new Set((memberRows ?? []).map((r) => r.thread_id)));
+    if (ids.length) {
+      const { data: tRows } = await supabase
+        .from("threads")
+        .select("id, title, created_at")
+        .in("id", ids)
+        .order("created_at", { ascending: false });
+      threads = (tRows ?? []).map((t) => ({ id: t.id, title: (t as any).title, created_at: (t as any).created_at }));
     }
   }
 
-  return (
-    <main className="mx-auto max-w-[720px] px-4 pb-24">
-      <form onSubmit={submit} className="grid gap-3">
-        <textarea
-          value={jp}
-          onChange={(e) => setJp(e.target.value)}
-          placeholder="日本語を入力（例：地下鉄の駅はどこですか？）"
-          rows={3}
-          className="w-full resize-y rounded-xl border border-neutral-200 bg-white p-3 text-base shadow-sm outline-none ring-0 focus:border-neutral-300"
-        />
-        <button
-          disabled={busy || !jp.trim()}
-          className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:opacity-50"
-        >
-          {busy ? "生成中..." : "翻訳"}
-        </button>
-      </form>
+  const selectedThreadId = threads.length ? threads[0].id : null;
 
-      {/* 選択スレッドのカード一覧 */}
-      <div className="mt-6 space-y-3">
-        {phrases.map((p: PhraseRow) => (
-          <TranslationCard key={p.id} phrase={p} />
-        ))}
-        {selectedThreadId && phrases.length === 0 && (
-          <div className="text-sm text-gray-500">このスレッドにはまだカードがありません</div>
-        )}
-        {!selectedThreadId && (
-          <div className="text-sm text-gray-500">
-            スレッドがありません。送信すると自動で作成されます
-          </div>
-        )}
-      </div>
-    </main>
-  );
+  // 選択スレッドの初期フレーズ
+  let phrasesPage: { items: any[]; nextCursor: string | null } | null = null;
+  if (selectedThreadId) {
+    const { data } = await supabase
+      .from("phrases")
+      .select("id,jp,fr,furigana,audio_url,created_at")
+      .eq("thread_id", selectedThreadId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(20);
+    const items = data ?? [];
+    const nextCursor = items.length ? `${items.at(-1)!.created_at}::${items.at(-1)!.id}` : null;
+    phrasesPage = { items, nextCursor };
+  }
+
+  // SWRの初期キャッシュ（fallback）
+  const fallback: Record<string, unknown> = {
+    "/api/threads": threads,
+  };
+  if (selectedThreadId && phrasesPage) {
+    fallback[`/api/threads/${selectedThreadId}/phrases?limit=20`] = phrasesPage;
+  }
+
+  return <HomeClient initialSelectedThreadId={selectedThreadId} fallback={fallback} />;
 }

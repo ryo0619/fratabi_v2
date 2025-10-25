@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThreadProvider } from "@/components/threads/ThreadContext";
+import SWRProvider from "@/components/providers/SWRProvider";
 
 export const metadata: Metadata = {
   title: "フラたび",
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <body suppressHydrationWarning className="min-h-dvh bg-gray-50 antialiased">
-        <ThreadProvider>{children}</ThreadProvider>
+        <SWRProvider>
+          <ThreadProvider>{children}</ThreadProvider>
+        </SWRProvider>
       </body>
     </html>
   );

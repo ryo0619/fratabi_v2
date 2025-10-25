@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   fratabi: {
     Tables: {
       favorites: {
@@ -248,21 +253,33 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          is_past_due: boolean
           plan: string
+          pro_current_period_end: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          is_past_due?: boolean
           plan?: string
+          pro_current_period_end?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          is_past_due?: boolean
           plan?: string
+          pro_current_period_end?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Relationships: []
       }
@@ -631,4 +648,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
