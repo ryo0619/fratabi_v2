@@ -4,7 +4,11 @@ import { createSupabaseRoute } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error('Server misconfigured: STRIPE_SECRET_KEY missing');
+  return new Stripe(key);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,6 +31,7 @@ export async function POST(req: NextRequest) {
       }
 
       const origin = req.nextUrl.origin
+      const stripe = getStripe();
       const session = await stripe.billingPortal.sessions.create({
         customer: prof.stripe_customer_id,
         return_url: `${origin}/settings/plan`,

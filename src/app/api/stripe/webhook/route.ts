@@ -5,7 +5,11 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs'; // 署名検証は生ボディ必須のためEdge不可
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error('Server misconfigured: STRIPE_SECRET_KEY missing');
+  return new Stripe(key);
+}
 
 // Subscription.items[].current_period_end の“最小値”をISOに正規化
 function periodEndISO(sub: Stripe.Subscription): string | null {
@@ -33,7 +37,10 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    const stripe = getStripe();
+    const wh = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!wh) throw new Error('Server misconfigured: STRIPE_WEBHOOK_SECRET missing');
+    event = stripe.webhooks.constructEvent(body, sig, wh);
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Signature verification failed'
     return NextResponse.json({ error: message }, { status: 400 });
@@ -63,6 +70,7 @@ export async function POST(req: NextRequest) {
         // 可能なら period_end を取得
         let periodISO: string | null = null;
         if (subscriptionId) {
+          const stripe = getStripe();
           const sub = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items'] });
           periodISO = periodEndISO(sub);
         }

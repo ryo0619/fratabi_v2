@@ -5,7 +5,11 @@ import { createSupabaseRoute } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs' // Stripe SDKとWebhook検証はEdge不可
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error('Server misconfigured: STRIPE_SECRET_KEY missing');
+  return new Stripe(key);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) Price解決（lookup_key→price_id）
+    const stripe = getStripe();
     const prices = await stripe.prices.list({
       lookup_keys: [process.env.STRIPE_PRICE_LOOKUP_KEY!],
       active: true,
