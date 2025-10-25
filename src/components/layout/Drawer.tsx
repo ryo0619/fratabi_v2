@@ -125,13 +125,13 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
               ✏️ 新しいスレッド
             </button>
 
-          <Link
-            className="block px-3 py-3 rounded-xl hover:bg-gray-100"
-            href="/favorites"
-            onClick={onClose}
-          >
-            ⭐️ お気に入り
-          </Link>
+            <Link
+              className="block px-3 py-3 rounded-xl hover:bg-gray-100"
+              href="/favorites"
+              onClick={onClose}
+            >
+              ⭐️ お気に入り
+            </Link>
 
             <ThreadsList open={open} onClose={onClose} />
           </nav>
@@ -144,13 +144,13 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
           >
             ⚙️ 設定
           </Link>
-          <Link
+          {/* <Link
             className="mt-1 block px-3 py-3 rounded-xl hover:bg-gray-100"
             href="/settings/plan"
             onClick={onClose}
           >
             💳 プラン / 課金
-          </Link>
+          </Link> */}
         </div>
       </div>
     </div>
@@ -202,7 +202,7 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
       setDeleteTarget(null);
       setTimeout(() => restoreFocusEl.current?.focus(), 0);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '削除に失敗しました';
+      const msg = err instanceof Error ? err.message : "削除に失敗しました";
       alert(msg);
       await mutate();
     } finally {

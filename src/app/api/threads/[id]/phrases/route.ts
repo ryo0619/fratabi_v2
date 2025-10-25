@@ -13,7 +13,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     let query = supabase
       .from('phrases')
-      .select('*')
+      .select('id,jp,fr,furigana,audio_url,created_at')
       .eq('thread_id', id)
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })

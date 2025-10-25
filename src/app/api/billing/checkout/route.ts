@@ -16,7 +16,21 @@ export async function POST(req: NextRequest) {
     const userId = auth.user.id
     const email = auth.user.email ?? undefined
 
-    // 2) Price解決（lookup_key→price_id）
+    // 2) すでに admin の場合はCheckoutを許可しない
+    {
+      const { data: me } = await supabase
+        .schema('fratabi')
+        .from('users')
+        .select('plan')
+        .eq('id', userId)
+        .single()
+      const plan = (me?.plan as string | undefined) ?? 'free'
+      if (plan === 'admin') {
+        return NextResponse.json({ error: 'ADMIN_PLAN_NO_CHECKOUT' }, { status: 403 })
+      }
+    }
+
+    // 3) Price解決（lookup_key→price_id）
     const prices = await stripe.prices.list({
       lookup_keys: [process.env.STRIPE_PRICE_LOOKUP_KEY!],
       active: true,
@@ -26,7 +40,7 @@ export async function POST(req: NextRequest) {
     const price = prices.data[0]
     if (!price) return NextResponse.json({ error: 'Price not found' }, { status: 400 })
 
-    // 3) 既存customer取得 or 作成（users@fratabi）
+    // 4) 既存customer取得 or 作成（users@fratabi）
     const db = supabase.schema('fratabi')
     type StripeIdRow = { stripe_customer_id: string | null }
     const res = await db
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
         .eq('id', userId)
     }
 
-    // 4) Checkout Session作成（mode=subscription）
+    // 5) Checkout Session作成（mode=subscription）
     const origin = req.nextUrl.origin
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

@@ -68,18 +68,24 @@ export async function POST(req: NextRequest) {
         }
 
         if (userId) {
-          await db
+          // admin は開発者向けの無制限プラン。手動で admin にされたユーザーは plan を変更しない。
+          const { data: cur } = await db
             .from('users')
-            .update(
-              {
-                plan: 'pro',
-                stripe_customer_id: customerId,
-                stripe_subscription_id: subscriptionId,
-                pro_current_period_end: periodISO,
-                is_past_due: false
-              } as any // 型定義に列が未反映でもビルドで止めない
-            )
-            .eq('id', userId);
+            .select('plan')
+            .eq('id', userId)
+            .single();
+
+          const updates: Record<string, unknown> = {
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            pro_current_period_end: periodISO,
+            is_past_due: false,
+          }
+          if ((cur?.plan as string | undefined) !== 'admin') {
+            updates.plan = 'pro'
+          }
+
+          await db.from('users').update(updates as any).eq('id', userId);
         }
         break;
       }
@@ -92,17 +98,23 @@ export async function POST(req: NextRequest) {
         const customerId = sub.customer as string;
         const status = sub.status;
 
-        const updates: any = {
-          pro_current_period_end: periodEndISO(sub),
-          is_past_due: status === 'past_due'
-        };
+        // 現在のプランを確認し、adminなら plan は書き換えない
+        const { data: cur } = await db
+          .from('users')
+          .select('plan')
+          .eq('stripe_customer_id', customerId)
+          .maybeSingle();
 
-        // ステータスに応じて plan も再度合わせる（canceled以外はpro維持）
-        if (isActiveLike(status)) {
-          updates.plan = 'pro';
+        const updates: Record<string, unknown> = {
+          pro_current_period_end: periodEndISO(sub),
+          is_past_due: status === 'past_due',
         }
 
-        await db.from('users').update(updates).eq('stripe_customer_id', customerId);
+        if ((cur?.plan as string | undefined) !== 'admin' && isActiveLike(status)) {
+          updates.plan = 'pro'
+        }
+
+        await db.from('users').update(updates as any).eq('stripe_customer_id', customerId);
         break;
       }
 
@@ -113,16 +125,21 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
-        await db
+        const { data: cur } = await db
           .from('users')
-          .update(
-            {
-              plan: 'free',
-              stripe_subscription_id: null,
-              is_past_due: false
-            } as any
-          )
-          .eq('stripe_customer_id', customerId);
+          .select('plan')
+          .eq('stripe_customer_id', customerId)
+          .maybeSingle();
+
+        const updates: Record<string, unknown> = {
+          stripe_subscription_id: null,
+          is_past_due: false,
+        }
+        if ((cur?.plan as string | undefined) !== 'admin') {
+          updates.plan = 'free'
+        }
+
+        await db.from('users').update(updates as any).eq('stripe_customer_id', customerId);
         break;
       }
 

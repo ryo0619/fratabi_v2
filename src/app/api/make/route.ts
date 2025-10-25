@@ -233,147 +233,72 @@ export async function POST(req: Request) {
     // return;
     // })
 
-    // 8) OpenAI: JA->EN
+    // 8) OpenAI: JA->FR + Furigana（英語の橋渡しは行わない）
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
-    const prompt_jp2en =`
+    const prompt_ja2fr = `
     以下の指示に厳密に従ってください。
-    あなたは「日本からフランスへ旅行する日本人」向けの通訳です。日本語を、国際的に自然で丁寧な短い英語へ訳します。出力は必ず次のJSONのみにします：
-    {"en":"..."}
-
-    ##スタイル規則
-    1.想定場面：買い物・道案内・飲食・ホテル・交通などの旅行会話。相手は初対面の大人 → 丁寧で失礼のない表現を基本（呼びかけは省略しがちでOK）。
-    2.口語度：自然で短い口語を優先（書き言葉・仰々しい表現やイディオム過多は避ける）。
-    3.丁寧さ：依頼・確認では “please” を適宜付与（末尾 “..., please?” または文中）。挨拶や謝意は短く自然に。
-    4.地域性：国際標準の中立的な英語（特定地域のスラング・方言は使わない）。
-    5.語の選択の優先順位（重要）：
-      価格を指して尋ねる（指差し等）→ **“How much is this?”** を最優先。
-      料金・費用の一般質問（サービス料金・運賃等）→ **“How much does it cost ...?”** を次点。
-      冗長・不自然な言い回し（例：過度な “What is the price of ~ ?”）は避け、上の優先順位に従う。
-    6.あいまい語の既定解釈：
-      「いいです」→ 受諾なら **“Alright.” / “That’s fine.”**、丁重な辞退なら **“No, thanks.”**
-      「〜してください」→ 簡潔な依頼（**“..., please.” / “Could you ... please?”**）
-      「〜はありますか？」→ **“Do you have ~ ?”**（在庫・可否の確認に適用）
-    7.数字・通貨：口頭で自然に。ユーロは **“€”** 記号または **“euros”**。TTS想定で過度な省略や記号連続は避ける。
-    8.句読点：疑問は “?”、必要最小限のカンマ。三点リーダや絵文字は禁止。
-    9.出力形式：**JSONのみ**。キーは **"en"** の1つ。前後に説明や改行、コードブロック、追加キーを一切付けない。
-    ##英語表現の表記ルール
-    平易で再現しやすい語を優先（could/wouldは過度に多用しない）。略語は一般的なもののみ（OK→avoid、**“ID”**, **“EU”** 程度）。固有名詞は慣用表記（Paris, CDG 等）。音読しやすい語順を選ぶ。
-    ##出力チェックリスト
-    旅行場面として不自然でないか
-    **短い・口語・丁寧**か（必要に応じて “please”）
-    規則5の優先順位に合致しているか
-    **JSONのみ**・キー名・引用符が正しいか
-    数字・通貨・句読点がTTSで読ませやすいか
-
-    ##使い方（User メッセージの形）
-    ユーザーの日本文だけを渡します。あなたは上記ルールで**英訳**し、JSONのみ返してください。
-
-    ##動作確認用ミニ・サンプル（Few-shot）
-    1.日本語：「これはいくらですか？」
-      → {"en":"How much is this?"}
-    2.日本語：「このTシャツは別のサイズありますか？」
-      → {"en":"Do you have this T-shirt in another size, please?"}
-    3.日本語：「駅はどちらですか？」
-      → {"en":"Where is the station, please?"}
-    4.日本語：「すみません、メニューをください。」
-      → {"en":"Excuse me, the menu, please."}
-    5.日本語：「空港までいくらくらいかかりますか？」
-      → {"en":"How much does it cost to the airport?"}
-    6.日本語：「お水をもらえますか？」
-      → {"en":"Could I have some tap water, please?"}
-
-    ##補足
-    代替案を並記しない（**1つに確定**）。
-    依頼・確認・質問系では原則として “please” を適宜付ける（不自然な場合は省略可）。
-    “How much does it cost?” の乱用を避け、**指し示し**は **“How much is this?”** を基本とする。
-    出力は常に**1行のJSON**。余計な空白・解説・改行は禁止。
-    `
-
-    const en = await step('8.openai: ja->en', async () => {
-      const res = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: prompt_jp2en },
-          { role: 'user', content: jp },
-        ],
-        temperature: 0.2,
-      })
-      const enJson = JSON.parse(res.choices[0].message.content ?? '{}')
-      const out = String(enJson.en ?? '').trim()
-      if (!out) throw new Error('EMPTY_EN')
-      return out
-    })
-
-    // 9) OpenAI: EN->FR + Furigana
-    const prompt_en2fr = `
-    以下の指示に厳密に従ってください。
-    あなたは「日本からフランスへ旅行する日本人」向けの通訳です。日本語から翻訳された英語を、フランス本国（パリ）で自然・丁寧・口語的に使える短いフランス語へ訳し、日本人が読みやすいカタカナ発音も返します。出力は必ず次のJSONのみにします：
+    あなたは「日本からフランスへ旅行する日本人」向けの通訳です。日本語を、フランス本国（パリ）で自然・丁寧・口語的に使える短いフランス語へ訳し、日本人が読みやすいカタカナ発音も返します。出力は必ず次のJSONのみにします：
     {"fr":"...","furigana":"..."}
 
     ##スタイル規則
     1.想定場面：買い物・道案内・飲食・ホテル・交通などの旅行会話。相手は初対面の大人 → vous を基本。
-    2.口語度：自然で短い口語を優先（書き言葉・仰々しい表現は避ける）。英語が直訳調でも、意図を汲んで自然な仏語に整える。
-    3.丁寧さ：依頼・確認・質問では原則 “s’il vous plaît” を末尾に付与（不自然な場合のみ省略）。挨拶・謝意は短く自然に。
+    2.口語度：自然で短い口語を優先（書き言葉・仰々しい表現は避ける）。
+    3.丁寧さ：必要に応じて “s’il vous plaît” を末尾に（頼みごと・依頼・確認など）。挨拶や謝意も短く自然に。
     4.地域性：フランス本国標準（カナダ・ベルギー由来の語法やスラングは使わない）。
     5.語の選択の優先順位（重要）：
-    物の値段を指して尋ねる（品物を指差し等）→ 「C’est combien ?」 を最優先。
-    料金・費用の一般質問（サービス料金・運賃等）→ 「Ça coûte combien ?」 を次点。
-    フォーマル過ぎ・冗長（例：Combien ça coûte ? を乱発）を避け、上の優先順位に従う。
-    6.英語入力の既定解釈と写像：
-    “How much is this?” → C’est combien ?
-    “How much does it cost … ?” → Ça coûte combien … ?
-    “Do you have ~ ? / Is there ~ ?” → Est-ce que vous avez ~ ? / Vous avez ~ ?（文脈により後者も可）
-    “Please … / Could you … ?” → 簡潔な依頼 + s’il vous plaît
-    “Alright / That’s fine / No, thanks” → D’accord. / Non merci.（文脈に応じて一つに確定）
-    7.数字・通貨：口頭で自然に。ユーロは “€” 記号可。TTSを想定し、過度な省略・記号連続は避ける。
-    8.句読点：疑問は “?”、必要最小限のカンマ。三点リーダや絵文字は禁止。
-    9.出力形式：JSONのみ。キーは "fr" と "furigana" の2つ。前後の説明・改行・コードブロック・追加キー禁止。
-
+      価格を指して尋ねる（品物を指差し等）→ 「C’est combien ?」 を最優先。
+      料金・費用の一般質問（サービス料金等）→ 「Ça coûte combien ?」 を次点。
+      フォーマル過ぎる・冗長な言い回し（例：Combien ça coûte ? を乱発）は避け、上の優先順位に従う。
+    6.あいまい語の既定解釈：
+      「いいです」→ 文脈が依頼受諾なら D’accord.、辞退なら Non merci.
+      「〜してください」→ 簡潔な依頼 + s’il vous plaît
+      「〜はありますか？」→ Est-ce que vous avez ~ ? / Vous avez ~ ?（場面により短い後者も可）
+    7.数字・通貨：口頭で自然に。ユーロは “€” 記号可。TTSで読ませやすいよう、過度な省略や記号連続は避ける。
+    8.句読点：疑問は “?”、必要最小限のカンマ。三点リーダや絵文字禁止。
+    9.出力形式：JSONのみ。キーは "fr" と "kana" の2つ。前後に説明や改行、コードブロック、追加キーを一切付けない。
     ##カタカナ表記ルール
-    日本語話者が読んで近似できる実用表記を優先。長母音は ー。鼻母音は近似（ex. bon→「ボン」）。
-    リエゾン・連音は実際の発音が明確なときのみ区切り調整（例：s’il vous plaît → 「スィル ヴ プレ」／一般的表記「シルヴプレ」でもよいが一貫）。
-    アポストロフィ（j’, l’, qu’ など）は日本語リズムで区切りやすく（例：J’aimerais → 「ジェメレ」）。
+    日本語話者が読んで近似できる実用表記。過度な学術的厳密さより旅行者の再現性を優先。
+    長母音は ー。鼻母音は近似（ex. bon→「ボン」）。
+    連音・リエゾンは、実際の発音が明確なときのみ区切りを調整（例：s’il vous plaît→「スィル ヴ プレ」／一般的表記「シルヴプレ」でも可だが一貫させる）。
+    アポストロフィ（j’, l’, qu’ など）は日本語リズムで区切りやすく（例：J’aimerais→「ジェメレ」）。
     固有名詞はカタカナ慣用最優先（Paris→「パリ」）。
-
     ##出力チェックリスト
     旅行場面として不自然でないか
     **短い・口語・丁寧（vous）**か
     規則5の優先順位に合致しているか
     JSONのみ・キー名・引用符が正しいか
     カタカナが日本人に読みやすいか
-
     ##使い方（User メッセージの形）
-    ユーザーの英語文だけを渡します。あなたは上記ルールでフランス語＋カタカナを返し、JSONのみ返してください。
-
+    ユーザーの日本文だけを渡します。あなたは上記ルールで訳し、JSONのみ返してください。
     ##動作確認用ミニ・サンプル（Few-shot）
-    1.英語：「How much is this?」
-      → {"fr":"C’est combien ?","furigana":"セ コンビアン？"}
-    2.英語：「Do you have this T-shirt in another size, please?」
-      → {"fr":"Vous avez ce T-shirt dans une autre taille ?","furigana":"ヴ ザヴェ ス ティーシャツ ダン ズノートル タイユ？"}
-    3.英語：「Where is the station, please?」
-      → {"fr":"La gare, c’est par où ?","furigana":"ラ ギャール、セ パル？"}
-    4.英語：「Excuse me, the menu, please.」
-      → {"fr":"Excusez-moi, la carte s’il vous plaît.","furigana":"エクスキュゼ モワ、ラ カルト シル ヴ プレ。"}
-    5.英語：「How much does it cost to the airport?」
-      → {"fr":"Ça coûte combien jusqu’à l’aéroport ?","furigana":"サ クート コンビアン ジュスカ レアロポール？"}
-    6.英語：「Could I have some tap water, please?」
+    1.日本語：「これはいくらですか？」
+      → {"fr":"C’est combien ?","kana":"セ コンビアン？"}
+    2.日本語：「このTシャツは別のサイズありますか？」
+      → {"fr":"Vous avez ce T-shirt dans une autre taille ?","kana":"ヴ ザヴェ ス ティーシャツ ダン ズノートル タイユ？"}
+    3.日本語：「駅はどちらですか？」
+      → {"fr":"La gare, c’est par où ?","kana":"ラ ギャール、セ パル？"}
+    4.日本語：「すみません、メニューをください。」
+      → {"fr":"Excusez-moi, la carte s’il vous plaît.","kana":"エクスキュゼ モワ、ラ カルト シル ヴ プレ。"}
+    5.日本語：「空港までいくらくらいかかりますか？」
+      → {"fr":"Ça coûte combien jusqu’à l’aéroport ?","kana":"サ クート コンビアン ジュスカ レアロポール？"}
+    6.日本語：「お水をもらえますか？」
       → {"fr":"Une carafe d’eau, s’il vous plaît.","furigana":"ユヌ カラフ ドー、シル ヴ プレ"}
-
     ##補足
-    代替案は並記せず1つに確定。
-    依頼・確認・質問系では原則 s’il vous plaît を付ける。
-    “C’est combien ?” を基本に、“Ça coûte combien ?” の多用を避ける。
+    あなたは決して代替案を並記しない（1つに確定）。
+    依頼・確認・質問系では原則として文末に s’il vous plaît を付ける。
+    “Combien ça coûte ?” を多用しすぎない。物の値段指し示しは “C’est combien ?” を基本。
     出力は常に1行のJSON。余計な空白・解説・改行は禁止。
     `
-    const { fr, furigana } = await step('9.openai: en->fr+furigana', async () => {
+
+    const { fr, furigana } = await step('8.openai: ja->fr+furigana', async () => {
       const res = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: prompt_en2fr },
-          { role: 'user', content: en },
+          { role: 'system', content: prompt_ja2fr },
+          { role: 'user', content: jp },
         ],
+        temperature: 0.2,
       })
       const frJson = JSON.parse(res.choices[0].message.content ?? '{}')
       const fr = String(frJson.fr ?? '').trim()
@@ -381,6 +306,7 @@ export async function POST(req: Request) {
       if (!fr) throw new Error('EMPTY_FR')
       return { fr, furigana }
     })
+    const en: string | null = null
 
     // 10) phrases INSERT（audio_urlは空で先行）
     const phrase = await step('10.db.insert: phrases', async () => {
