@@ -105,11 +105,17 @@ function rateCheck(userId: string) {
   return recent.length <= RATE_MAX;
 }
 
-// --- プラン別 period_key ---
+// --- プラン別 period_key（JSTでのYYYY-MM。freeは生涯=lifetime）---
 function periodKey(plan: string) {
   if (plan === 'pro') {
-    const d = new Date();
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    const parts = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: '2-digit',
+    }).formatToParts(new Date())
+    const yyyy = parts.find((p) => p.type === 'year')?.value ?? '1970'
+    const mm = parts.find((p) => p.type === 'month')?.value ?? '01'
+    return `${yyyy}-${mm}`
   }
   return 'lifetime';
 }
@@ -210,28 +216,42 @@ export async function POST(req: Request) {
       if (!okRL) throw Object.assign(new Error('RATE_LIMIT'), { status: 429 })
     })
 
-    // 6) 使用回数チェック
-    // const plan = await step<'free' | 'pro'>('6.user.plan', async () => {
-    // //   const row = okOne<{ plan: string }>('select users.plan', await supabase
-    // //     .from('users')
-    // //     .select('plan')
-    // //     .eq('id', user.id)
-    // //     .single())
-    // //   return (row?.plan ?? 'free') as 'free' | 'pro'
-    // // })
-    // // const pKey = periodKey(plan)
-    // // const limit = plan === 'pro' ? 100 : 20
+    // 6) 使用回数チェック（プランに応じて増分・上限判定）
+    await step('6.usage.check+increment', async () => {
+      type PlanRow = { plan: string | null }
+      const row = okOne<PlanRow>('select users.plan', await supabase
+        .from('users')
+        .select('plan')
+        .eq('id', user.id)
+        .single())
 
-    // // await step('7.usage.rpc', async () => {
-    // //   const { data, error } = await supabase.rpc('fratabi_increment_usage', {
-    // //     p_user_id: user.id, p_period_key: pKey, p_limit: limit,
-    // //   })
-    // //   if (error) throw error
-    // //   if (!data || (data as any).reached === true) {
-    // //     throw Object.assign(new Error('LIMIT_REACHED'), { status: 402 })
-    // //   }
-    // return;
-    // })
+      const curPlan = ((row?.plan ?? 'free') as 'free' | 'pro' | 'admin')
+      if (curPlan === 'admin') return; // 無制限
+
+      const pKey = periodKey(curPlan)
+      const limit = curPlan === 'pro' ? 100 : 20
+
+      // 現在のカウントを取得
+      const { data: usageRow } = await supabase
+        .from('usage_counters')
+        .select('count')
+        .eq('user_id', user.id)
+        .eq('period_key', pKey)
+        .maybeSingle()
+
+      const current = usageRow?.count ?? 0
+      if (current >= limit) {
+        throw Object.assign(new Error('LIMIT_REACHED'), { status: 402 })
+      }
+
+      // 無ければ 1 で作成、あれば current+1 に更新（衝突時は上書き）。
+      // 競合が極小前提の簡易実装。高頻度ならDB関数/トランザクションへ移行検討。
+      const next = current + 1
+      const up = await (supabase as any)
+        .from('usage_counters')
+        .upsert({ user_id: user.id, period_key: pKey, count: next }, { onConflict: 'user_id,period_key' })
+      if (up.error) throw up.error
+    })
 
     // 8) OpenAI: JA->FR + Furigana（英語の橋渡しは行わない）
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
@@ -255,7 +275,7 @@ export async function POST(req: Request) {
       「〜はありますか？」→ Est-ce que vous avez ~ ? / Vous avez ~ ?（場面により短い後者も可）
     7.数字・通貨：口頭で自然に。ユーロは “€” 記号可。TTSで読ませやすいよう、過度な省略や記号連続は避ける。
     8.句読点：疑問は “?”、必要最小限のカンマ。三点リーダや絵文字禁止。
-    9.出力形式：JSONのみ。キーは "fr" と "kana" の2つ。前後に説明や改行、コードブロック、追加キーを一切付けない。
+    9.出力形式：JSONのみ。キーは "fr" と "furigana" の2つ。前後に説明や改行、コードブロック、追加キーを一切付けない。
     ##カタカナ表記ルール
     日本語話者が読んで近似できる実用表記。過度な学術的厳密さより旅行者の再現性を優先。
     長母音は ー。鼻母音は近似（ex. bon→「ボン」）。
@@ -272,15 +292,15 @@ export async function POST(req: Request) {
     ユーザーの日本文だけを渡します。あなたは上記ルールで訳し、JSONのみ返してください。
     ##動作確認用ミニ・サンプル（Few-shot）
     1.日本語：「これはいくらですか？」
-      → {"fr":"C’est combien ?","kana":"セ コンビアン？"}
+      → {"fr":"C’est combien ?","furigana":"セ コンビアン？"}
     2.日本語：「このTシャツは別のサイズありますか？」
-      → {"fr":"Vous avez ce T-shirt dans une autre taille ?","kana":"ヴ ザヴェ ス ティーシャツ ダン ズノートル タイユ？"}
+      → {"fr":"Vous avez ce T-shirt dans une autre taille ?","furigana":"ヴ ザヴェ ス ティーシャツ ダン ズノートル タイユ？"}
     3.日本語：「駅はどちらですか？」
-      → {"fr":"La gare, c’est par où ?","kana":"ラ ギャール、セ パル？"}
+      → {"fr":"La gare, c’est par où ?","furigana":"ラ ギャール、セ パル？"}
     4.日本語：「すみません、メニューをください。」
-      → {"fr":"Excusez-moi, la carte s’il vous plaît.","kana":"エクスキュゼ モワ、ラ カルト シル ヴ プレ。"}
+      → {"fr":"Excusez-moi, la carte s’il vous plaît.","furigana":"エクスキュゼ モワ、ラ カルト シル ヴ プレ。"}
     5.日本語：「空港までいくらくらいかかりますか？」
-      → {"fr":"Ça coûte combien jusqu’à l’aéroport ?","kana":"サ クート コンビアン ジュスカ レアロポール？"}
+      → {"fr":"Ça coûte combien jusqu’à l’aéroport ?","furigana":"サ クート コンビアン ジュスカ レアロポール？"}
     6.日本語：「お水をもらえますか？」
       → {"fr":"Une carafe d’eau, s’il vous plaît.","furigana":"ユヌ カラフ ドー、シル ヴ プレ"}
     ##補足

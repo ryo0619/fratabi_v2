@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AutoRedirect from "./redirect-client";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ export default function BillingSuccessPage({ searchParams }: { searchParams: { [
       <div>
         <Link href="/settings/plan" className="text-blue-600 hover:underline">プラン設定へ戻る</Link>
       </div>
+      {/* 数秒後に自動的にプラン画面へ戻す */}
+      <AutoRedirect to="/settings/plan" delayMs={2500} />
     </div>
   );
 }
-
