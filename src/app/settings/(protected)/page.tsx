@@ -30,9 +30,9 @@ export default async function SettingsUnifiedPage() {
   const email = profRow?.email ?? auth.user?.email ?? "";
   const displayName = profRow?.display_name ?? "";
 
-  let plan: "free" | "pro" | "admin" = (userRow?.plan as any) ?? "free";
-  let isPastDue = Boolean(userRow?.is_past_due);
-  let proCurrentPeriodEnd: string | null = (userRow?.pro_current_period_end as string | null) ?? null;
+  const plan = (userRow?.plan as "free" | "pro" | "admin" | undefined) ?? "free";
+  const isPastDue = Boolean(userRow?.is_past_due);
+  const proCurrentPeriodEnd: string | null = (userRow?.pro_current_period_end as string | null) ?? null;
 
   // 利用状況を /usage 経由で取得（Cookie転送）、失敗時はフォールバック
   let usage: UsagePayload | null = null;
