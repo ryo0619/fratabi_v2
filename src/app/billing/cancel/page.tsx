@@ -8,9 +8,8 @@ export default function BillingCancelPage() {
       <h1 className="text-xl font-semibold">決済をキャンセルしました</h1>
       <p className="text-sm text-neutral-700">またいつでもお手続きいただけます。</p>
       <div>
-        <Link href="/settings/plan" className="text-blue-600 hover:underline">プラン設定へ戻る</Link>
+        <Link href="/settings" className="text-blue-600 hover:underline">設定へ戻る</Link>
       </div>
     </div>
   );
 }
-
