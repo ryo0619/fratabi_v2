@@ -7,14 +7,17 @@ import { fav_get, fav_remove, fav_upsert } from "@/lib/favoritesStore";
 export default function TranslationCard({
   phrase,
   onUnfavorite,
+  onDelete,
 }: {
   phrase: PhraseRow;
   onUnfavorite?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [fav, setFav] = useState<boolean>(false);
   const [busy, setBusy] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   // 初期化：オフライン保存の有無からfav状態を復元
   useEffect(() => {
@@ -62,9 +65,9 @@ export default function TranslationCard({
       try {
         await fav_remove(phrase.id);
       } catch {}
-      // 楽観的にDOMから外す
-      const el = document.getElementById(`card-${phrase.id}`);
-      el?.remove();
+      // 楽観的に非表示（Reactのレンダリングで除去）
+      setDeleted(true);
+      onDelete?.(phrase.id);
     } else {
       alert("通信エラー。再試行してください。");
     }
@@ -94,6 +97,8 @@ export default function TranslationCard({
       setPlaying(false);
     }
   }
+
+  if (deleted) return null;
 
   return (
     <div

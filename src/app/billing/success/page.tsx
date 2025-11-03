@@ -13,10 +13,10 @@ export default function BillingSuccessPage({ searchParams }: { searchParams: { [
       )}
       <p className="text-sm text-neutral-700">プランの反映には数秒かかることがあります。反映されない場合はページを再読み込みしてください。</p>
       <div>
-        <Link href="/settings/plan" className="text-blue-600 hover:underline">プラン設定へ戻る</Link>
+        <Link href="/settings" className="text-blue-600 hover:underline">設定へ戻る</Link>
       </div>
       {/* 数秒後に自動的にプラン画面へ戻す */}
-      <AutoRedirect to="/settings/plan" delayMs={2500} />
+      <AutoRedirect to="/settings" delayMs={2500} />
     </div>
   );
 }
