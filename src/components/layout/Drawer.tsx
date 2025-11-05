@@ -16,6 +16,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { Divider } from "@heroui/divider";
 
 type Thread = { id: string; title: string };
 
@@ -138,11 +139,27 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
         </div>
         <div className="border-t p-3 bg-white">
           <Link
-            className="block px-3 py-3 rounded-xl hover:bg-gray-100"
+            className="block px-3 py-2 rounded-xl hover:bg-gray-100"
             href="/settings"
             onClick={onClose}
           >
             ⚙️ 設定
+          </Link>
+          <Divider className="my-2" />
+          <Link
+            className="mt-1 block px-3 py-2 rounded-xl hover:bg-gray-100"
+            href="/settings/privacy"
+            onClick={onClose}
+          >
+            🔒 プライバシーポリシー
+          </Link>
+          <Divider className="my-2" />
+          <Link
+            className="mt-1 block px-3 py-2 rounded-xl hover:bg-gray-100"
+            href="/settings/terms"
+            onClick={onClose}
+          >
+            📄 利用規約
           </Link>
           {/* <Link
             className="mt-1 block px-3 py-3 rounded-xl hover:bg-gray-100"
@@ -157,17 +174,30 @@ export default function Drawer({ open, onClose, onCreateThread }: Props) {
   );
 }
 
-function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ThreadsList({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const { selectedThreadId, setSelectedThreadId } = useThreadSelection();
   const router = useRouter();
   const pathname = usePathname();
-  const { data, error, isLoading, mutate } = useSWR<Thread[]>("/api/threads", fetcher, {
-    shouldRetryOnError: false,
-  });
+  const { data, error, isLoading, mutate } = useSWR<Thread[]>(
+    "/api/threads",
+    fetcher,
+    {
+      shouldRetryOnError: false,
+    }
+  );
   const list = Array.isArray(data) ? data : [];
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const restoreFocusEl = useRef<HTMLElement | null>(null);
 
@@ -217,9 +247,18 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
   return (
     <div className="pt-2">
       <div className="px-3 pb-1 text-xs text-gray-500">あなたのスレッド</div>
-      {menuOpenId && <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />}
-      {isLoading && <div className="px-3 py-2 text-sm text-gray-500">読み込み中...</div>}
-      {error && <div className="px-3 py-2 text-sm text-red-600">取得に失敗しました</div>}
+      {menuOpenId && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setMenuOpenId(null)}
+        />
+      )}
+      {isLoading && (
+        <div className="px-3 py-2 text-sm text-gray-500">読み込み中...</div>
+      )}
+      {error && (
+        <div className="px-3 py-2 text-sm text-red-600">取得に失敗しました</div>
+      )}
       {list.map((t) => (
         <div
           key={t.id}
@@ -272,12 +311,16 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
                       });
                       if (!res.ok) {
                         const j = await res.json().catch(() => ({}));
-                        return alert(j?.message || j?.error || "名前の変更に失敗しました");
+                        return alert(
+                          j?.message || j?.error || "名前の変更に失敗しました"
+                        );
                       }
                       // 楽観的更新 → 再検証
                       await mutate((curr?: Thread[]) => {
                         const list = Array.isArray(curr) ? curr : [];
-                        return list.map((x) => (x.id === t.id ? { ...x, title: next } : x));
+                        return list.map((x) =>
+                          x.id === t.id ? { ...x, title: next } : x
+                        );
                       }, false);
                       mutate();
                     } catch (err) {
@@ -330,7 +373,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
         </div>
       ))}
       {!isLoading && !error && list.length === 0 && (
-        <div className="px-3 py-2 text-sm text-gray-500">スレッドはまだありません</div>
+        <div className="px-3 py-2 text-sm text-gray-500">
+          スレッドはまだありません
+        </div>
       )}
       <AlertDialog
         open={deleteOpen}
@@ -340,7 +385,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-left">スレッドを削除しますか？</AlertDialogTitle>
+            <AlertDialogTitle className="text-left">
+              スレッドを削除しますか？
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
               この操作は取り消せません。スレッド
               {deleteTarget?.title
@@ -352,7 +399,9 @@ function ThreadsList({ open, onClose }: { open: boolean; onClose: () => void }) 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>キャンセル</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>
+              キャンセル
+            </AlertDialogCancel>
             <AlertDialogAction
               autoFocus
               disabled={deleting}

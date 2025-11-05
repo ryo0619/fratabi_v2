@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseRSC } from "@/lib/supabase/server";
 import AppShell from "@/components/layout/AppShell";
-import SettingsNav from "../nav";
 import type { CSSProperties } from "react";
 
 export const dynamic = "force-dynamic";
@@ -26,16 +25,9 @@ export default async function SettingsLayout({ children }: { children: React.Rea
         className="mx-auto w-full max-w-[1040px] px-4 py-6"
         style={themeVars}
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
-          <aside className="lg:sticky lg:top-20 self-start">
-            <div className="rounded-xl border bg-white/70 backdrop-blur p-2">
-              <SettingsNav />
-            </div>
-          </aside>
-          <section className="min-h-[60vh] rounded-xl border bg-white/70 backdrop-blur p-4">
-            {children}
-          </section>
-        </div>
+        <section className="min-h-[60vh] rounded-xl border bg-white/70 backdrop-blur p-4">
+          {children}
+        </section>
       </div>
     </AppShell>
   );
