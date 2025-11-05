@@ -5,7 +5,6 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Fratabi",
     short_name: "Fratabi",
     start_url: "/",
-    display: "standalone",
     background_color: "#1D2A49",
     theme_color: "#1D2A49",
     icons: [
