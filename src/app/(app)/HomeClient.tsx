@@ -6,7 +6,8 @@ import TranslationCard from "@/components/cards/TranslationCard";
 import type { PhraseRow } from "@/lib/history";
 import { useThreadSelection } from "@/components/threads/ThreadContext";
 
-const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((r) => r.json());
 
 export default function HomeClient({
   initialSelectedThreadId,
@@ -22,7 +23,11 @@ export default function HomeClient({
   );
 }
 
-function HomeClientInner({ initialSelectedThreadId }: { initialSelectedThreadId: string | null }) {
+function HomeClientInner({
+  initialSelectedThreadId,
+}: {
+  initialSelectedThreadId: string | null;
+}) {
   const { selectedThreadId, setSelectedThreadId } = useThreadSelection();
   const [jp, setJp] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,8 +40,13 @@ function HomeClientInner({ initialSelectedThreadId }: { initialSelectedThreadId:
   }, [selectedThreadId, initialSelectedThreadId, setSelectedThreadId]);
 
   const { data: threads } = useSWR(`/api/threads`, fetcher);
-  const phrasesKey = selectedThreadId ? `/api/threads/${selectedThreadId}/phrases?limit=20` : null;
-  const { data: phrasesPage, mutate: mutatePhrases } = useSWR(phrasesKey, fetcher);
+  const phrasesKey = selectedThreadId
+    ? `/api/threads/${selectedThreadId}/phrases?limit=20`
+    : null;
+  const { data: phrasesPage, mutate: mutatePhrases } = useSWR(
+    phrasesKey,
+    fetcher
+  );
   const phrases = useMemo(() => phrasesPage?.items ?? [], [phrasesPage]);
 
   async function submit(e: React.FormEvent) {
@@ -78,7 +88,7 @@ function HomeClientInner({ initialSelectedThreadId }: { initialSelectedThreadId:
         />
         <button
           disabled={busy || !jp.trim()}
-          className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-white disabled:opacity-50 hover:bg-black"
         >
           {busy ? "生成中..." : "翻訳"}
         </button>
@@ -89,7 +99,9 @@ function HomeClientInner({ initialSelectedThreadId }: { initialSelectedThreadId:
           <TranslationCard key={p.id} phrase={p} />
         ))}
         {selectedThreadId && phrases.length === 0 && (
-          <div className="text-sm text-gray-500">このスレッドにはまだカードがありません</div>
+          <div className="text-sm text-gray-500">
+            このスレッドにはまだカードがありません
+          </div>
         )}
         {!selectedThreadId && (
           <div className="text-sm text-gray-500">
@@ -100,4 +112,3 @@ function HomeClientInner({ initialSelectedThreadId }: { initialSelectedThreadId:
     </main>
   );
 }
-
