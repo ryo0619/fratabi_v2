@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { PhraseRow } from "@/lib/history";
 import { fav_get, fav_remove, fav_upsert } from "@/lib/favoritesStore";
 
-export default function TranslationCard({
+import { memo } from "react";
+
+function TranslationCard({
   phrase,
   onUnfavorite,
   onDelete,
@@ -170,3 +172,5 @@ export default function TranslationCard({
     </div>
   );
 }
+
+export default memo(TranslationCard);

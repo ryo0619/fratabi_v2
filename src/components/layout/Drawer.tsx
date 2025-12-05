@@ -185,7 +185,7 @@ function ThreadsList({
   const router = useRouter();
   const pathname = usePathname();
   const { data, error, isLoading, mutate } = useSWR<Thread[]>(
-    "/api/threads",
+    open ? "/api/threads" : null,
     fetcher,
     {
       shouldRetryOnError: false,

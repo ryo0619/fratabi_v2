@@ -3,7 +3,8 @@ import OpenAI from 'openai';
 import { createSupabaseRoute, createSupabaseService } from '@/lib/supabase/server';
 
 // --- ここはファイルの一番上でOK（1回は確実に出る）---
-console.log('[make] module loaded at', new Date().toISOString())
+const ENABLE_LOG = process.env.NODE_ENV !== 'production'
+if (ENABLE_LOG) console.log('[make] module loaded at', new Date().toISOString())
 
 export const runtime = 'nodejs';
 export const dynamic   = 'force-dynamic'
@@ -52,6 +53,7 @@ function safeErr(e: unknown) {
 }
 
 function log(tag: string, payload?: unknown) {
+  if (!ENABLE_LOG) return
   if (payload !== undefined) console.log(`[make ${_reqId}] ${ms()} ${tag}`, payload)
   else console.log(`[make ${_reqId}] ${ms()} ${tag}`)
 }

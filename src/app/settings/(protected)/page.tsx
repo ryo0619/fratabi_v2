@@ -21,18 +21,19 @@ export default async function SettingsUnifiedPage() {
   const { data: auth } = await supabase.auth.getUser();
   const db = supabase.schema("fratabi");
 
-  // プロフィール
-  const [{ data: profRow }, { data: userRow }] = await Promise.all([
-    db.from("users").select("id,display_name,email,plan,is_past_due,pro_current_period_end").limit(1).single(),
-    db.from("users").select("plan,is_past_due,pro_current_period_end").eq("id", auth.user?.id ?? "").maybeSingle(),
-  ]);
+  // プロフィール + プラン（単一クエリ）
+  const { data: profRow } = await db
+    .from("users")
+    .select("id,display_name,email,plan,is_past_due,pro_current_period_end")
+    .eq("id", auth.user?.id ?? "")
+    .single();
 
   const email = profRow?.email ?? auth.user?.email ?? "";
   const displayName = profRow?.display_name ?? "";
 
-  const plan = (userRow?.plan as "free" | "pro" | "admin" | undefined) ?? "free";
-  const isPastDue = Boolean(userRow?.is_past_due);
-  const proCurrentPeriodEnd: string | null = (userRow?.pro_current_period_end as string | null) ?? null;
+  const plan = (profRow?.plan as "free" | "pro" | "admin" | undefined) ?? "free";
+  const isPastDue = Boolean(profRow?.is_past_due);
+  const proCurrentPeriodEnd: string | null = (profRow?.pro_current_period_end as string | null) ?? null;
 
   // 利用状況を /usage 経由で取得（Cookie転送）、失敗時はフォールバック
   let usage: UsagePayload | null = null;

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@/lib/database.types';
+import { createSupabaseRoute } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -14,29 +12,10 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);
   }
 
-  // リダイレクト用レスポンスを先に作成し、そこへCookieを書き込む
-  const redirectResponse = NextResponse.redirect(`${origin}/`);
+  // 標準ヘルパでCookieを現在のレスポンスに付与させる
+  const supabase = await createSupabaseRoute();
 
-  const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  const supabase = createServerClient<Database, 'fratabi'>(supabaseUrl, anonKey, {
-    db: { schema: 'fratabi' },
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        cookieStore.set({ name, value: '', ...options });
-      },
-    },
-  });
-
-  // 1) セッション確立（Set-Cookie を redirectResponse に付与）
+  // 1) セッション確立
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data?.session?.user) {
     return NextResponse.redirect(`${origin}/auth/login?error=exchange_failed`);
@@ -50,10 +29,6 @@ export async function GET(req: Request) {
     console.error('[callback] users upsert error:', up.error);
   }
 
-  // 3) スプラッシュへ（Set-Cookie付きのレスポンスを返す）
-  const splash = NextResponse.redirect(`${origin}/splash`);
-  // cookieStore へ set 済みのCookieは自動的にレスポンスへ反映される
-  // ただし一部環境で付与が弱い場合に備え、redirectResponse に設定済みのCookieを統合
-  redirectResponse.cookies.getAll().forEach((c) => splash.cookies.set(c));
-  return splash;
+  // 3) スプラッシュへ
+  return NextResponse.redirect(`${origin}/splash`);
 }
